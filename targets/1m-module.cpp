@@ -269,8 +269,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     an.Assemble();
     std::cout << "Total time = " << time_ass.ReturnTimeDouble()/1000. << " s" << std::endl;
     
-    extern TPZManVector<STATE,3> integratedforce;
-    std::cout << "\nintegratedforce = " << integratedforce << std::endl;
+//    extern TPZManVector<STATE,3> integratedforce;
+//    std::cout << "\nintegratedforce = " << integratedforce << std::endl;
     
     ///solves the system
     std::cout << "--------- Solve ---------" << std::endl;
