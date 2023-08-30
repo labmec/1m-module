@@ -1,0 +1,5 @@
+*.DS_Store
+build
+.vscode
+LOG
+targets/meshpath_config.h

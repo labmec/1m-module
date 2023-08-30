@@ -1,0 +1,3 @@
+#ifndef MESHESDIR
+#define MESHES_DIR "@MESHESDIR@"
+#endif
