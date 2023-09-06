@@ -54,7 +54,7 @@ int main() {
     TPZGeoMesh* gmesh = nullptr;
     if(readGMeshFromGmsh){
 //        std::string filename = "geometry_shell_test.msh";
-        std::string filename = "geometry_shell_new2.msh";
+        std::string filename = "geometry_shell_good.msh";
         gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename);
         CreateBCs(gmesh);
     }
