@@ -26,6 +26,7 @@
 #include "TPZAnalyticSolution.h"
 #include "TPZGeoMeshTools.h"
 #include <TPZGmshReader.h>
+#include "tpzchangeel.h"
 #include "meshpath_config.h"
 
 enum EMatid {ENone,EDomain,EBC,EinternalBC,ESymmetryBC,EFixedXZ,EFixedZ};
@@ -34,10 +35,15 @@ const int global_nthread = 16;
 TPZGeoMesh* CreateGMesh(int ndiv);
 TPZGeoMesh* ReadMeshFromGmsh(std::string file_name);
 void CreateBCs(TPZGeoMesh* gmesh);
+void ChangeElsToCylMap(TPZGeoMesh* gmesh);
 TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas);
 
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
 void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
+
+#ifdef PZ_LOG
+static TPZLogger logger("pz.1mmodule");
+#endif
 
 
 int main() {
@@ -54,13 +60,35 @@ int main() {
     TPZGeoMesh* gmesh = nullptr;
     if(readGMeshFromGmsh){
 //        std::string filename = "geometry_shell_test.msh";
-        std::string filename = "geometry_shell_good.msh";
+//        std::string filename = "geometry_shell_good.msh";
+        std::string filename = "cylindertest.msh";
         gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename);
         CreateBCs(gmesh);
     }
     else{
         gmesh = CreateGMesh(ndiv);
     }
+    ChangeElsToCylMap(gmesh);
+#ifdef PZ_LOG
+    if (logger.isDebugEnabled()) {
+        for(int iel = 0 ; iel < gmesh->NElements() ; iel++){
+            TPZGeoEl* geoel = gmesh->Element(iel);
+            TPZFNMatrix<9,REAL> gradx(3,3,0.);
+            TPZManVector<REAL,3> qsicenter(geoel->Dimension(),0.);
+            geoel->CenterPoint(geoel->NSides()-1, qsicenter);
+            geoel->GradX(qsicenter, gradx);
+            std::stringstream sout;
+            sout << "el = " << iel << std::endl;
+            gradx.Print(sout);
+            LOGPZ_DEBUG(logger, sout.str())
+        }
+    }
+#endif
+    
+    
+    TPZCheckGeom geom(gmesh);
+//    geom.UniformRefine(2);
+    
     std::ofstream out("gmesh.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
     {
@@ -155,11 +183,13 @@ TPZGeoMesh* ReadMeshFromGmsh(std::string file_name)
 
 void CreateBCs(TPZGeoMesh* gmesh) {
 //    TPZManVector<int64_t,1> cornerindexes = {24};
-    TPZManVector<int64_t,1> cornerindexes = {351};
+//    TPZManVector<int64_t,1> cornerindexes = {351};
+    TPZManVector<int64_t,1> cornerindexes = {0};
     int64_t index = -1;
     gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedXZ, index);
 //    cornerindexes = {27};
-    cornerindexes = {352};
+//    cornerindexes = {352};
+    cornerindexes = {2};
     gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedZ, index);
     gmesh->BuildConnectivity();
     
@@ -290,7 +320,7 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     std::cout << "--------- Post Process ---------" << std::endl;
     TPZSimpleTimer postProc("Post processing time");
     const std::string plotfile = "postprocess";
-    constexpr int vtkRes{1};
+    constexpr int vtkRes{3};
     
     TPZVec<std::string> fields = {
         // "ExactDisplacement",
@@ -306,3 +336,13 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     return;
 }
 
+void ChangeElsToCylMap(TPZGeoMesh* gmesh) {
+    const int64_t nel = gmesh->NElements();
+    TPZManVector<REAL,3> xcenter(3,0.);
+    TPZFNMatrix<9,REAL> axis(3,3,0.);
+    axis.Identity();
+    for(int64_t iel = 0 ; iel < nel ; iel++){
+        TPZGeoEl* geoel = gmesh->Element(iel);
+        TPZChangeEl::ChangeToCylinder(gmesh, iel, xcenter, axis);
+    }
+}
