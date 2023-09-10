@@ -36,6 +36,7 @@ TPZGeoMesh* CreateGMesh(int ndiv);
 TPZGeoMesh* ReadMeshFromGmsh(std::string file_name);
 void CreateBCs(TPZGeoMesh* gmesh);
 void ChangeElsToCylMap(TPZGeoMesh* gmesh);
+void printVTKWJacInfo(std::string filename, TPZGeoMesh* gmesh);
 TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas);
 
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
@@ -48,27 +49,29 @@ static TPZLogger logger("pz.1mmodule");
 
 int main() {
 #ifdef PZ_LOG
-//    TPZLogger::InitializePZLOG("log4cxx.cfg");
     TPZLogger::InitializePZLOG();
 #endif
     
     std::cout << "--------- Starting simulation ---------" << std::endl;
     // Create gmesh
-    int ndiv = 2;
     const int pord = 3;
     const bool readGMeshFromGmsh = true;
     TPZGeoMesh* gmesh = nullptr;
     if(readGMeshFromGmsh){
 //        std::string filename = "geometry_shell_test.msh";
 //        std::string filename = "geometry_shell_good.msh";
-        std::string filename = "cylindertest.msh";
+//        std::string filename = "cylindertest.msh";
+        std::string filename = "new_mesh.msh";
         gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename);
         CreateBCs(gmesh);
     }
-    else{
+    else{ // use TPZGenGrid
+        int ndiv = 2;
         gmesh = CreateGMesh(ndiv);
     }
+    printVTKWJacInfo("gmesh_jac_before_cyl.vtk",gmesh);
     ChangeElsToCylMap(gmesh);
+    printVTKWJacInfo("gmesh_jac_after_cyl.vtk",gmesh);
 #ifdef PZ_LOG
     if (logger.isDebugEnabled()) {
         for(int iel = 0 ; iel < gmesh->NElements() ; iel++){
@@ -184,12 +187,14 @@ TPZGeoMesh* ReadMeshFromGmsh(std::string file_name)
 void CreateBCs(TPZGeoMesh* gmesh) {
 //    TPZManVector<int64_t,1> cornerindexes = {24};
 //    TPZManVector<int64_t,1> cornerindexes = {351};
-    TPZManVector<int64_t,1> cornerindexes = {0};
+//    TPZManVector<int64_t,1> cornerindexes = {0};
+    TPZManVector<int64_t,1> cornerindexes = {140};
     int64_t index = -1;
     gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedXZ, index);
 //    cornerindexes = {27};
 //    cornerindexes = {352};
-    cornerindexes = {2};
+//    cornerindexes = {2};
+    cornerindexes = {141};
     gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedZ, index);
     gmesh->BuildConnectivity();
     
@@ -320,7 +325,7 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     std::cout << "--------- Post Process ---------" << std::endl;
     TPZSimpleTimer postProc("Post processing time");
     const std::string plotfile = "postprocess";
-    constexpr int vtkRes{3};
+    constexpr int vtkRes{1};
     
     TPZVec<std::string> fields = {
         // "ExactDisplacement",
@@ -345,4 +350,21 @@ void ChangeElsToCylMap(TPZGeoMesh* gmesh) {
         TPZGeoEl* geoel = gmesh->Element(iel);
         TPZChangeEl::ChangeToCylinder(gmesh, iel, xcenter, axis);
     }
+}
+
+void printVTKWJacInfo(std::string filename, TPZGeoMesh* gmesh) {
+    TPZVec<REAL> elData(gmesh->NElements(), -100);
+    for (int i = 0; i < gmesh->NElements(); i++) {
+        TPZGeoEl* gel = gmesh->Element(i);
+        if(!gel) DebugStop();
+        const int geldim = gel->Dimension();
+        TPZManVector<REAL,3> qsi(geldim,0.);
+        gel->CenterPoint(gel->NSides()-1, qsi);
+        REAL detjac = -1000;
+        TPZFMatrix<REAL> jac(3,3,0.), axes(3,3,0.), jacinv(3,3,0.);
+        gel->Jacobian(qsi, jac, axes, detjac, jacinv);
+        elData[i] = detjac;
+    }
+    std::ofstream out(filename);
+    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out, elData);
 }
