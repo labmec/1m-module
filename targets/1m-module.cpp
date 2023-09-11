@@ -28,14 +28,17 @@
 #include <TPZGmshReader.h>
 #include "tpzchangeel.h"
 #include "meshpath_config.h"
+#include "TPZRefPatternDataBase.h"
+#include "TPZRefPatternTools.h"
 
-enum EMatid {ENone,EDomain,EBC,EinternalBC,ESymmetryBC,EFixedXZ,EFixedZ};
+enum EMatid {ENone,EDomain,EBC,EinternalBC,ESymmetryBC,EFixedXZ,EFixedZ,EStiffner};
 const int global_nthread = 16;
 
 TPZGeoMesh* CreateGMesh(int ndiv);
 TPZGeoMesh* ReadMeshFromGmsh(std::string file_name);
 void CreateBCs(TPZGeoMesh* gmesh);
 void ChangeElsToCylMap(TPZGeoMesh* gmesh);
+void RefinePyrTo2Tets(TPZGeoMesh* gmesh);
 void printVTKWJacInfo(std::string filename, TPZGeoMesh* gmesh);
 TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas);
 
@@ -53,6 +56,8 @@ int main() {
 #endif
     
     std::cout << "--------- Starting simulation ---------" << std::endl;
+    gRefDBase.InitializeRefPatterns();
+    
     // Create gmesh
     const int pord = 3;
     const bool readGMeshFromGmsh = true;
@@ -61,7 +66,8 @@ int main() {
 //        std::string filename = "geometry_shell_test.msh";
 //        std::string filename = "geometry_shell_good.msh";
 //        std::string filename = "cylindertest.msh";
-        std::string filename = "new_mesh.msh";
+//        std::string filename = "new_mesh.msh";
+        std::string filename = "geometry_refeita_01.msh";
         gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename);
         CreateBCs(gmesh);
     }
@@ -69,8 +75,17 @@ int main() {
         int ndiv = 2;
         gmesh = CreateGMesh(ndiv);
     }
+    
     printVTKWJacInfo("gmesh_jac_before_cyl.vtk",gmesh);
     ChangeElsToCylMap(gmesh);
+    
+    // Refine mesh directionally towards the singularity at the stiffner
+    std::set<int> matidstoref = {EStiffner};
+    const int gelmatToSee = EStiffner+1;
+    TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
+    TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
+    TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
+    
     printVTKWJacInfo("gmesh_jac_after_cyl.vtk",gmesh);
 #ifdef PZ_LOG
     if (logger.isDebugEnabled()) {
@@ -88,6 +103,7 @@ int main() {
     }
 #endif
     
+    RefinePyrTo2Tets(gmesh);
     
     TPZCheckGeom geom(gmesh);
 //    geom.UniformRefine(2);
@@ -102,7 +118,7 @@ int main() {
     // Create compmeshes
     TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
     elas->fE = 250.;//206.8150271873455;
-    elas->fPoisson = 0.;
+    elas->fPoisson = 0.25;
     elas->fProblemType = TElasticity3DAnalytic::EStretchx;
     TPZCompMesh* cmeshH1 = CreateH1CMesh(gmesh,pord,elas);
     
@@ -175,7 +191,7 @@ TPZGeoMesh* ReadMeshFromGmsh(std::string file_name)
         // o matid que voce mesmo escolher
         TPZManVector<std::map<std::string,int>,4> stringtoint(4);
         stringtoint[3]["dom"] = EDomain;
-//        stringtoint[2]["Surfaces"] = EBC;
+        stringtoint[1]["stif"] = EStiffner;
         
         reader.SetDimNamePhysical(stringtoint);
         reader.GeometricGmshMesh(file_name,gmesh);
@@ -188,13 +204,15 @@ void CreateBCs(TPZGeoMesh* gmesh) {
 //    TPZManVector<int64_t,1> cornerindexes = {24};
 //    TPZManVector<int64_t,1> cornerindexes = {351};
 //    TPZManVector<int64_t,1> cornerindexes = {0};
-    TPZManVector<int64_t,1> cornerindexes = {140};
+//    TPZManVector<int64_t,1> cornerindexes = {140};
+    TPZManVector<int64_t,1> cornerindexes = {142};
     int64_t index = -1;
     gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedXZ, index);
 //    cornerindexes = {27};
 //    cornerindexes = {352};
 //    cornerindexes = {2};
-    cornerindexes = {141};
+//    cornerindexes = {141};
+    cornerindexes = {143};
     gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedZ, index);
     gmesh->BuildConnectivity();
     
@@ -202,6 +220,7 @@ void CreateBCs(TPZGeoMesh* gmesh) {
     int count = 0;
     for(int64_t iel = 0 ; iel < nel ; iel++){
         TPZGeoEl* gel = gmesh->Element(iel);
+        if(gel->Dimension() == 1) continue;
         const int firstside = gel->FirstSide(2);
         const int lastside = gel->FirstSide(3);
         for(int iside = firstside ; iside < lastside ; iside++) {
@@ -325,13 +344,15 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     std::cout << "--------- Post Process ---------" << std::endl;
     TPZSimpleTimer postProc("Post processing time");
     const std::string plotfile = "postprocess";
-    constexpr int vtkRes{1};
+    constexpr int vtkRes{0};
     
     TPZVec<std::string> fields = {
         // "ExactDisplacement",
         // "ExactStress",
         "Displacement",
         "Stress",
+        "VonMises",
+        "I2"
     };
     auto vtk = TPZVTKGenerator(cmesh, fields, plotfile, vtkRes);
     vtk.SetNThreads(global_nthread);
@@ -367,4 +388,17 @@ void printVTKWJacInfo(std::string filename, TPZGeoMesh* gmesh) {
     }
     std::ofstream out(filename);
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out, elData);
+}
+
+void RefinePyrTo2Tets(TPZGeoMesh* gmesh) {
+    auto refpat = gRefDBase.FindRefPattern("PyrTwoTets");
+    if(!refpat) DebugStop();
+    for(auto& gel : gmesh->ElementVec()){
+        if(gel->HasSubElement()) continue;
+        if (gel->Type() == EPiramide) {
+            gel->SetRefPattern(refpat);
+            TPZVec<TPZGeoEl*> subels;
+            gel->Divide(subels);
+        }
+    }
 }
