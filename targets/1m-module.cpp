@@ -30,6 +30,7 @@
 #include "meshpath_config.h"
 #include "TPZRefPatternDataBase.h"
 #include "TPZRefPatternTools.h"
+#include "ProblemData.h"
 
 enum EMatid {ENone,EDomain,EBC,EinternalBC,ESymmetryBC,EFixedXZ,EFixedZ,EStiffner};
 const int global_nthread = 16;
@@ -50,7 +51,7 @@ static TPZLogger logger("pz.1mmodule");
 #endif
 
 
-int main() {
+int main(int argc, char *argv[]) {
 #ifdef PZ_LOG
     TPZLogger::InitializePZLOG();
 #endif
@@ -58,16 +59,18 @@ int main() {
     std::cout << "--------- Starting simulation ---------" << std::endl;
     gRefDBase.InitializeRefPatterns();
     
+    // Reading problem data from json
+    std::string jsonfilename = "1m-module-init.json";
+    if(argc > 1) jsonfilename = std::string(argv[1]);
+    ProblemData problemdata;
+    problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);
+        
     // Create gmesh
-    const int pord = 3;
+    const int pord = problemdata.DisppOrder();
     const bool readGMeshFromGmsh = true;
     TPZGeoMesh* gmesh = nullptr;
     if(readGMeshFromGmsh){
-//        std::string filename = "geometry_shell_test.msh";
-//        std::string filename = "geometry_shell_good.msh";
-//        std::string filename = "cylindertest.msh";
-//        std::string filename = "new_mesh.msh";
-        std::string filename = "geometry_refeita_01.msh";
+        std::string filename = problemdata.MeshName();
         gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename);
         CreateBCs(gmesh);
     }
@@ -81,26 +84,25 @@ int main() {
     
     // Refine mesh directionally towards the singularity at the stiffner
     std::set<int> matidstoref = {EStiffner};
-    const int gelmatToSee = EStiffner+1;
     TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
     TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
     TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
     
     printVTKWJacInfo("gmesh_jac_after_cyl.vtk",gmesh);
 #ifdef PZ_LOG
-    if (logger.isDebugEnabled()) {
-        for(int iel = 0 ; iel < gmesh->NElements() ; iel++){
-            TPZGeoEl* geoel = gmesh->Element(iel);
-            TPZFNMatrix<9,REAL> gradx(3,3,0.);
-            TPZManVector<REAL,3> qsicenter(geoel->Dimension(),0.);
-            geoel->CenterPoint(geoel->NSides()-1, qsicenter);
-            geoel->GradX(qsicenter, gradx);
-            std::stringstream sout;
-            sout << "el = " << iel << std::endl;
-            gradx.Print(sout);
-            LOGPZ_DEBUG(logger, sout.str())
-        }
-    }
+//    if (logger.isDebugEnabled()) {
+//        for(int iel = 0 ; iel < gmesh->NElements() ; iel++){
+//            TPZGeoEl* geoel = gmesh->Element(iel);
+//            TPZFNMatrix<9,REAL> gradx(3,3,0.);
+//            TPZManVector<REAL,3> qsicenter(geoel->Dimension(),0.);
+//            geoel->CenterPoint(geoel->NSides()-1, qsicenter);
+//            geoel->GradX(qsicenter, gradx);
+//            std::stringstream sout;
+//            sout << "el = " << iel << std::endl;
+//            gradx.Print(sout);
+//            LOGPZ_DEBUG(logger, sout.str())
+//        }
+//    }
 #endif
     
     RefinePyrTo2Tets(gmesh);
@@ -116,25 +118,34 @@ int main() {
     }
     
     // Create compmeshes
+    if(problemdata.DomainVec().size() > 1) DebugStop(); // Please implement the next lines correctly if many domains
+    
     TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
-    elas->fE = 250.;//206.8150271873455;
-    elas->fPoisson = 0.25;
-    elas->fProblemType = TElasticity3DAnalytic::EStretchx;
-    TPZCompMesh* cmeshH1 = CreateH1CMesh(gmesh,pord,elas);
+    elas->fE = problemdata.DomainVec()[0].E;
+    elas->fPoisson = problemdata.DomainVec()[0].nu;
+    elas->fProblemType = TElasticity3DAnalytic::ENone;
+    
+    TPZCompMesh* cmesh = nullptr;
+    if(problemdata.HdivType() < 0){
+        cmesh = CreateH1CMesh(gmesh,pord,elas);
+    }
+    else{
+        std::cout << "Implement me!" << std::endl;
+    }
     
     // Analysis
     //Solve Multiphysics
-    TPZLinearAnalysis an(cmeshH1);
+    TPZLinearAnalysis an(cmesh);
     an.SetExact(elas->ExactSolution());
-    SolveProblemDirect(an,cmeshH1);
+    SolveProblemDirect(an,cmesh);
     
     // Post Process
     std::cout << "--------- PostProcess ---------" << std::endl;
-    PrintResults(an,cmeshH1);
+    PrintResults(an,cmesh);
 
     
     // deleting stuff
-    delete cmeshH1;
+    delete cmesh;
     delete gmesh;
     
     
@@ -265,8 +276,8 @@ TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnaly
     const STATE E = elas->fE, nu = elas->fPoisson;
     TPZManVector<STATE> force = {0,0,0};
     TPZElasticity3D *mat = new TPZElasticity3D(EDomain, E, nu, force, 0., 0., 0.);
-    mat->SetExactSol(elas->ExactSolution(), 2);
-    mat->SetForcingFunction(elas->ForceFunc(), 2);
+//    mat->SetExactSol(elas->ExactSolution(), 2);
+//    mat->SetForcingFunction(elas->ForceFunc(), 2);
     cmesh->InsertMaterialObject(mat);
 //    mat->SetDimension(dim);
     
@@ -344,13 +355,15 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     std::cout << "--------- Post Process ---------" << std::endl;
     TPZSimpleTimer postProc("Post processing time");
     const std::string plotfile = "postprocess";
-    constexpr int vtkRes{0};
+    constexpr int vtkRes{2};
     
     TPZVec<std::string> fields = {
         // "ExactDisplacement",
         // "ExactStress",
         "Displacement",
         "Stress",
+        "Strain",
+        "PrincipalStrain",
         "VonMises",
         "I2"
     };
