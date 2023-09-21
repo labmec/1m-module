@@ -13,12 +13,14 @@
 
 	"StaticCondensation": false,
 
+	"InternalPressure": 10.34,
+
 	"Domain": [ // domain data
 		{
 			"name": "dom",
 			"matID": 1,
-			"E": 250,
-			"nu": 0.25
+			"E": 210000,
+			"nu": 0.3
 		}
 	],
 

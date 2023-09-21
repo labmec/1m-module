@@ -57,6 +57,8 @@ private:
     
     int fLambdaID = -1;
     
+    REAL fInternalPressure = -1;
+    
     TPZVec<TPZCompMesh*> fMeshVector;
     
 public:
@@ -93,6 +95,9 @@ public:
     const bool& CondensedElements() const {return fCondensedElement;}
     void SetCondensedElements(bool condense) {fCondensedElement = condense;}
 
+    const REAL& InternalPressure() const {return fInternalPressure;}
+    void SetInternalPressure(bool intpressure) {fInternalPressure = intpressure;}
+    
     const std::vector<DomainData>& DomainVec() const {return fDomain;}
     void SetDomainVec(const std::vector<DomainData>& vec) {fDomain = vec;}
     

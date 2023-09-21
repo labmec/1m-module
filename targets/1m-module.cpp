@@ -41,7 +41,7 @@ void CreateBCs(TPZGeoMesh* gmesh);
 void ChangeElsToCylMap(TPZGeoMesh* gmesh);
 void RefinePyrTo2Tets(TPZGeoMesh* gmesh);
 void printVTKWJacInfo(std::string filename, TPZGeoMesh* gmesh);
-TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas);
+TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas, const REAL& internalPressure);
 
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
 void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
     
     TPZCompMesh* cmesh = nullptr;
     if(problemdata.HdivType() < 0){
-        cmesh = CreateH1CMesh(gmesh,pord,elas);
+        cmesh = CreateH1CMesh(gmesh,pord,elas,problemdata.InternalPressure());
     }
     else{
         std::cout << "Implement me!" << std::endl;
@@ -265,7 +265,7 @@ void CreateBCs(TPZGeoMesh* gmesh) {
 }
 
 
-TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas) {
+TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnalytic *elas, const REAL& internalPressure) {
     TPZCompMesh* cmesh = new TPZCompMesh(gmesh);
     const int dim = gmesh->Dimension();
     cmesh->SetDimModel(dim);
@@ -295,6 +295,7 @@ TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnaly
     cmesh->InsertMaterialObject(BCCondSymm);
     
     val1.Identity();
+    val1 *= internalPressure;
     auto* BCCondInt = mat->CreateBC(mat, EinternalBC, normaltrac, val1, val2);
     cmesh->InsertMaterialObject(BCCondInt);
 
