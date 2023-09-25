@@ -53,9 +53,9 @@ private:
     
     std::vector<BcData> fBcTangentialVec; // vector containg all the traction bcs info
     
-    int fInterfaceID = -1;
+    int fInterfaceID = 20;
     
-    int fLambdaID = -1;
+    int fLambdaID = 10;
     
     REAL fInternalPressure = -1;
     
