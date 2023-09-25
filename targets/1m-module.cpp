@@ -14,7 +14,7 @@
 #include <pzbuildmultiphysicsmesh.h>
 #include <pzskylstrmatrix.h>
 #include <pzskylstrmatrix.h>
-#include <TPZMultiPhysicsCompMesh.h>
+#include <TPZMultiphysicsCompMesh.h>
 #include <pzstepsolver.h>
 #include <TPZLinearAnalysis.h>
 #include <TPZSSpStructMatrix.h> //symmetric sparse matrix storage
