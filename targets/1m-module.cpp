@@ -319,7 +319,7 @@ TPZCompMesh* CreateH1CMesh(TPZGeoMesh* gmesh, const int pord, TElasticity3DAnaly
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
 {
 
-//    TPZSkylineStructMatrix<STATE> matskl(cmesh);
+    // TPZSkylineStructMatrix<STATE> matskl(cmesh);
     TPZSSpStructMatrix<STATE> matskl(cmesh);
     matskl.SetNumThreads(global_nthread);
     an.SetStructuralMatrix(matskl);

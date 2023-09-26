@@ -18,6 +18,7 @@
 #include <pzstepsolver.h>
 #include <TPZLinearAnalysis.h>
 #include <TPZSSpStructMatrix.h> //symmetric sparse matrix storage
+#include "pzfstrmatrix.h"
 #include <TPZSimpleTimer.h>
 #include "pzvisualmatrix.h"
 #include "TPZSYSMPMatrix.h"
@@ -81,7 +82,7 @@ static TPZLogger logger("pz.1mmodule");
 int main(int argc, char *argv[])
 {
 #ifdef PZ_LOG
-    TPZLogger::InitializePZLOG();
+    TPZLogger::InitializePZLOG("1mmodule.cfg");
 #endif
 
     std::cout << "--------- Starting simulation ---------" << std::endl;
@@ -99,47 +100,10 @@ int main(int argc, char *argv[])
     TPZGeoMesh *gmesh = nullptr;
     std::string filename = problemdata.MeshName();
     gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename, &problemdata);
-
     CreateBCs(gmesh, &problemdata);
+    InsertLambda(&problemdata, gmesh);
 
-    gmesh->ElementVec()[10440]->SetMaterialId(EZeroNormalDisp);
-    gmesh->ElementVec()[10046]->SetMaterialId(EZeroNormalDisp);
 
-    for (auto gel : gmesh->ElementVec())
-    {
-        if (gel->Dimension() != 2)
-            continue;
-        
-        int matid = gel->MaterialId();
-        int64_t nnode = gel->NNodes();
-        for (int i = 0; i < nnode; i++)
-        {
-            int64_t node_index = gel->NodeIndex(i);
-            if (node_index == 142)
-            {
-                TPZGeoElSide geoside(gel);
-                TPZVec<REAL> point(2,1./3.);
-                TPZVec<REAL> normal(3,0.);
-                geoside.Normal(point,normal);
-                if (abs(abs(normal[2]) - 1.0) <= 1.0e-3)
-                {
-                    std::cout << "gel with node 142 is: " << gel->Index() << ", Normal: " << normal << ", matid: " << matid << std::endl;
-                }
-
-            }
-            else if (node_index == 143)
-            {
-                TPZGeoElSide geoside(gel);
-                TPZVec<REAL> point(2,1./3.);
-                TPZVec<REAL> normal(3,0.);
-                geoside.Normal(point,normal);
-                if (abs(abs(normal[2]) - 1.0) <= 1.0e-3)
-                {
-                    std::cout << "gel with node 143 is: " << gel->Index() << ", Normal: " << normal << ", matid: " << matid << std::endl;
-                }
-            }
-        }
-    }
 
     printVTKWJacInfo("gmesh_jac_before_cyl.vtk", gmesh);
 
@@ -178,11 +142,11 @@ int main(int argc, char *argv[])
     TPZCompMesh *cmesh_p = CreateCMeshP(&problemdata, gmesh);
     TPZCompMesh *cmesh_pm = nullptr;
     TPZCompMesh *cmesh_g = nullptr;
-    if (problemdata.CondensedElements())
-    {
-        cmesh_pm = CreateCMeshPm(&problemdata, gmesh);
-        cmesh_g = CreateCMeshG(&problemdata, gmesh);
-    }
+    // if (problemdata.CondensedElements())
+    // {
+    //     cmesh_pm = CreateCMeshPm(&problemdata, gmesh);
+    //     cmesh_g = CreateCMeshG(&problemdata, gmesh);
+    // }
 
     TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh);
 
@@ -191,7 +155,11 @@ int main(int argc, char *argv[])
 
     // Analysis
     // Solve Multiphysics
-    TPZLinearAnalysis an(cmesh_m);
+    TPZLinearAnalysis an(cmesh_m, RenumType::EMetis);
+    {
+        std::ofstream out("cmesh.txt");
+        cmesh_m->Print(out);
+    }
     SolveProblemDirect(an, cmesh_m);
 
     // Post Process
@@ -223,7 +191,6 @@ TPZGeoMesh *ReadMeshFromGmsh(std::string file_name, ProblemData *problem_data)
     gmesh = new TPZGeoMesh();
     TPZGmshReader reader;
     reader.GeometricGmshMesh(file_name, gmesh);
-    InsertLambda(problem_data, gmesh);
     gmesh->BuildConnectivity();
     return gmesh;
 }
@@ -279,6 +246,7 @@ void InsertLambda(ProblemData *simData, TPZGeoMesh *gmesh)
             }
         }
     }
+    gmesh->BuildConnectivity();
 }
 
 TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
@@ -364,9 +332,6 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
 
     // expanding the solution vector
     cmesh_u->ExpandSolution();
-
-    if ((simData->CondensedElements() && simData->MeshVector().size() != 4) || simData->MeshVector().size() < 2)
-        DebugStop();
 
     simData->MeshVector()[0] = cmesh_u;
 
@@ -554,7 +519,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
             auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(BCmat2);
             cmesh_m->InsertMaterialObject(matBC2);
 
-            auto BCmat3 = mat->CreateBC(mat, EZeroNormalStress, 0, val1, val2);
+            auto BCmat3 = mat->CreateBC(mat, EZeroNormalStress, 2, val1, val2);
             auto matBC3 = dynamic_cast<TPZBndCondT<STATE> *>(BCmat3);
             cmesh_m->InsertMaterialObject(matBC3);
         }
@@ -568,8 +533,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
             cmesh_m->InsertMaterialObject(matBC);
         }
 
-        //This is hard coded to imposed tangential stress
-        if (0)
+        //This is hard coded to impose tangential stress
         {
             val2[0] = 0.;
             auto BCmat = mat->CreateBC(mat, EZeroTangentialStress, 3, val1, val2);
@@ -636,11 +600,15 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m)
         TPZMultiphysicsElement *multEl = dynamic_cast<TPZMultiphysicsElement *>(compEl);
         int64_t numSpaces = multEl->NMeshes();
 
-        if (numSpaces < 4)
-            DebugStop();
+        // if (numSpaces < 4)
+        //     DebugStop();
 
-        int64_t numConnectExt = numSpaces - 3;
+        int64_t numConnectExt = 1;
         int nConnect = multEl->NConnects();
+        int test = compEl->NConnects();
+
+        if (test != nConnect)
+            DebugStop();
 
         for (int ic = nConnect - numConnectExt; ic < nConnect; ic++)
         {
@@ -721,11 +689,12 @@ void InsertBCInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, 
 
     int64_t nel = gmesh->NElements();
 
-    TPZVec<int> IDVec(simData->TangentialBCs().size(), 0);
+    TPZVec<int> IDVec(simData->TangentialBCs().size() + 1, 0); //hard coded to account for the null tangential stress
     for (int i = 0; i < simData->TangentialBCs().size(); i++)
     {
         IDVec[i] = simData->TangentialBCs()[i].matID;
     }
+    IDVec[0] = EZeroTangentialStress;
 
     // For tangential boundary conditions
     for (auto const &BcMatID : IDVec)
@@ -858,9 +827,9 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
 
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
 {
-
-    //    TPZSkylineStructMatrix<STATE> matskl(cmesh);
-    TPZSSpStructMatrix<STATE> matskl(cmesh);
+    TPZSkylineStructMatrix<STATE> matskl(cmesh);
+    // TPZSSpStructMatrix<STATE> matskl(cmesh);
+    // TPZFStructMatrix<STATE> matskl(cmesh);
     matskl.SetNumThreads(global_nthread);
     an.SetStructuralMatrix(matskl);
 
@@ -966,21 +935,6 @@ void RefinePyrTo2Tets(TPZGeoMesh *gmesh)
 
 void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
 {
-    //    TPZManVector<int64_t,1> cornerindexes = {24};
-    //    TPZManVector<int64_t,1> cornerindexes = {351};
-    //    TPZManVector<int64_t,1> cornerindexes = {0};
-    //    TPZManVector<int64_t,1> cornerindexes = {140};
-    TPZManVector<int64_t, 1> cornerindexes = {142};
-    int64_t index = -1;
-    // gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedXZ, index);
-    //    cornerindexes = {27};
-    //    cornerindexes = {352};
-    //    cornerindexes = {2};
-    //    cornerindexes = {141};
-    cornerindexes = {143};
-    // gmesh->CreateGeoElement(EPoint, cornerindexes, EFixedZ, index);
-    gmesh->BuildConnectivity();
-
     const int64_t nel = gmesh->NElements();
     int count = 0;
     for (int64_t iel = 0; iel < nel; iel++)
@@ -988,8 +942,6 @@ void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
         TPZGeoEl *gel = gmesh->Element(iel);
         int matid = gel->MaterialId();
         if (gel->Dimension() == 1)
-            continue;
-        if (matid == problem_data->LambdaID())
             continue;
         const int firstside = gel->FirstSide(2);
         const int lastside = gel->FirstSide(3);
@@ -1003,24 +955,17 @@ void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
                 gelside.CenterPoint(center);
                 REAL radius = sqrt(centerX[0] * centerX[0] + centerX[1] * centerX[1]);
                 gelside.Normal(center, normal);
-                if (radius < 343.1 && fabs(normal[2]) < 0.2)
+                if (radius < 343.1 && fabs(normal[2]) < 0.2) //internal surface, where the pressure is applied
                 {
                     TPZGeoElBC(gelside, EPressure);
                     TPZGeoElBC(gelside, EZeroTangentialStress);
                 }
-                else if (fabs(centerX[1]) < 1.e-3)
+                else if (fabs(centerX[1]) < 1.e-3) //symmetric surface, where zero normal displacement and tangential stress is applied
                 {
                     TPZGeoElBC(gelside, EZeroNormalDisp);
                     TPZGeoElBC(gelside, EZeroTangentialStress);
-                    //                    if(count == 0){
-                    //                        const int nnod = gelside.NSideNodes();
-                    //                        if(nnod != 3) DebugStop();
-                    //                        TPZGeoElBC(gel,gelside.SideNodeLocIndex(0),EFixedXZ);
-                    //                        TPZGeoElBC(gel,gelside.SideNodeLocIndex(1),EFixedX);
-                    //                        count++;
-                    //                    }
                 }
-                else
+                else //external surface, zero surface traction
                 {
                     TPZGeoElBC(gelside, EZeroNormalStress);
                     TPZGeoElBC(gelside, EZeroTangentialStress);
@@ -1028,4 +973,46 @@ void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
             }
         }
     }
+
+    // for (auto gel : gmesh->ElementVec())
+    // {
+    //     if (gel->Dimension() != 2)
+    //         continue;
+        
+    //     int matid = gel->MaterialId();
+    //     int64_t nnode = gel->NNodes();
+    //     for (int i = 0; i < nnode; i++)
+    //     {
+    //         int64_t node_index = gel->NodeIndex(i);
+    //         if (node_index == 142)
+    //         {
+    //             TPZGeoElSide geoside(gel);
+    //             TPZVec<REAL> point(2,1./3.);
+    //             TPZVec<REAL> normal(3,0.);
+    //             geoside.Normal(point,normal);
+    //             if (abs(abs(normal[2]) - 1.0) <= 1.0e-3)
+    //             {
+    //                 std::cout << "gel with node 142 is: " << gel->Index() << ", Normal: " << normal << ", matid: " << matid << std::endl;
+    //             }
+
+    //         }
+    //         else if (node_index == 143)
+    //         {
+    //             TPZGeoElSide geoside(gel);
+    //             TPZVec<REAL> point(2,1./3.);
+    //             TPZVec<REAL> normal(3,0.);
+    //             geoside.Normal(point,normal);
+    //             if (abs(abs(normal[2]) - 1.0) <= 1.0e-3)
+    //             {
+    //                 std::cout << "gel with node 143 is: " << gel->Index() << ", Normal: " << normal << ", matid: " << matid << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
+
+    //We restrain the normal displacement in the z direction to elements at the lid to get rid off rigid body modes
+    // gmesh->ElementVec()[3835]->SetMaterialId(EZeroNormalDisp);
+    // gmesh->ElementVec()[4229]->SetMaterialId(EZeroNormalDisp);
+
+    gmesh->BuildConnectivity();
 }
