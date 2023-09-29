@@ -38,6 +38,8 @@
 #include "TPZNullMaterialCS.h"
 #include <pzelementgroup.h>
 #include <pzcondensedcompel.h>
+#include "pzskylmat.h"
+#include "TPZMatrixSolver.h"
 
 const int global_nthread = 16;
 
@@ -587,8 +589,6 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m)
     TPZStack<TPZElementGroup *> elGroups;
     int count = 0;
 
-    auto cmesh_u = cmesh_m->MeshVector()[0];
-
     // Creating the element groups for the domain
     for (int64_t el = 0; el < ncompEl; el++)
     {
@@ -597,18 +597,8 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m)
         if (compEl->Dimension() != dim)
             continue;
 
-        TPZMultiphysicsElement *multEl = dynamic_cast<TPZMultiphysicsElement *>(compEl);
-        int64_t numSpaces = multEl->NMeshes();
-
-        // if (numSpaces < 4)
-        //     DebugStop();
-
         int64_t numConnectExt = 1;
-        int nConnect = multEl->NConnects();
-        int test = compEl->NConnects();
-
-        if (test != nConnect)
-            DebugStop();
+        int nConnect = compEl->NConnects();
 
         for (int ic = nConnect - numConnectExt; ic < nConnect; ic++)
         {
@@ -844,8 +834,33 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     an.Assemble();
     std::cout << "Total time = " << time_ass.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    //    extern TPZManVector<STATE,3> integratedforce;
-    //    std::cout << "\nintegratedforce = " << integratedforce << std::endl;
+    // TPZFMatrix<REAL> mat71(72,72,0.);
+    // auto mat = an.MatrixSolver<STATE>().Matrix();
+    // mat->GetSub(0,0,72,72,mat71);
+    // std::ofstream matout("matrix.txt");
+    // mat71.Print("mat",matout,EMathematicaInput);
+
+    TPZFMatrix<REAL> rigidbody(an.Rhs().Rows(),1,0.);
+    rigidbody(9,0) = 0.3333333333;
+    rigidbody(10,0) = 0.3333333333;
+    rigidbody(11,0) = 0.3333333333;
+
+    rigidbody(12,0) = -0.3333333333;
+    rigidbody(13,0) = -0.3333333333;
+    rigidbody(14,0) = -0.3333333333;
+
+    rigidbody(69,0) = -0.3333333333;
+    rigidbody(70,0) = -0.3333333333;
+    rigidbody(71,0) = -0.3333333333;
+
+    {
+        std::ofstream out("cmesh_solve.txt");
+        cmesh->Print(out);
+    }
+    an.LoadSolution(rigidbody);
+    cmesh->TransferMultiphysicsSolution();
+
+    PrintResults(an, cmesh);
 
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;
@@ -865,7 +880,7 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     std::cout << "--------- Post Process ---------" << std::endl;
     TPZSimpleTimer postProc("Post processing time");
     const std::string plotfile = "postprocess";
-    constexpr int vtkRes{2};
+    constexpr int vtkRes{0};
 
     TPZVec<std::string> fields = {
         // "ExactDisplacement",
@@ -873,9 +888,7 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
         "Displacement",
         "Stress",
         "Strain",
-        "PrincipalStrain",
-        "VonMises",
-        "I2"};
+        "VonMises"};
     auto vtk = TPZVTKGenerator(cmesh, fields, plotfile, vtkRes);
     vtk.SetNThreads(global_nthread);
     vtk.Do();
@@ -1011,8 +1024,8 @@ void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
     // }
 
     //We restrain the normal displacement in the z direction to elements at the lid to get rid off rigid body modes
-    // gmesh->ElementVec()[3835]->SetMaterialId(EZeroNormalDisp);
-    // gmesh->ElementVec()[4229]->SetMaterialId(EZeroNormalDisp);
+    gmesh->ElementVec()[3835]->SetMaterialId(EZeroNormalDisp);
+    gmesh->ElementVec()[4229]->SetMaterialId(EZeroNormalDisp);
 
     gmesh->BuildConnectivity();
 }
