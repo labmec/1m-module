@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
     
     // Reading problem data from json
     std::string jsonfilename = "1m-module-init.json";
+//    std::string jsonfilename = "1m-module-lid.json";
     if(argc > 1) jsonfilename = std::string(argv[1]);
     ProblemData problemdata;
     problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);

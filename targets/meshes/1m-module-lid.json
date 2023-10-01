@@ -1,0 +1,57 @@
+{	
+	"MeshName": "geometry_withlid.msh",
+
+	"CreateMsh": false,
+
+	"HdivType": -1, // h1 approximation
+
+	"DisppOrder": 3, // approximation order for velocity
+
+	"Dim": 3,
+
+	"Resolution": 0,
+
+	"StaticCondensation": false,
+
+	"InternalPressure": 10.34,
+
+	"Domain": [ // domain data
+		{
+			"name": "dom",
+			"matID": 1,
+			"E": 210000,
+			"nu": 0.3
+		}
+	],
+
+	"NormalBoundary":[
+		{
+			"name": "NoNormFlow", // name of boundary condition
+			"type": 0, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0,
+			"matID": 2
+		}
+	],
+
+	"TangentialBoundary": [
+		{
+			"name": "UnitTanFlow", // name of boundary condition
+			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [-1,0,0],
+			"matID": 3
+		},
+		{
+			"name": "NoTanFlow", // name of boundary condition
+			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [0,0,0],
+			"matID": 4
+		}
+	]
+
+}
+
+
+
+
+
+
