@@ -36,7 +36,6 @@ void ProblemData::ReadJson(std::string file){
     if(input.find("Domain") == input.end()) DebugStop();
     if(input.find("NormalBoundary") == input.end()) DebugStop();
     if(input.find("TangentialBoundary") == input.end()) DebugStop();
-    if(input.find("InternalPressure") == input.end()) DebugStop();
         
     // accessing and assigning values
     fMeshName = input["MeshName"];
@@ -56,8 +55,9 @@ void ProblemData::ReadJson(std::string file){
     fResolution = input["Resolution"];
     
     fCondensedElement = input["StaticCondensation"];
-    
-    fInternalPressure = input["InternalPressure"];
+
+    if(input.find("InternalPressure") != input.end())
+        fInternalPressure = input["InternalPressure"];
     
     DomainData domaindata;
     for(auto& domainjson : input["Domain"]){

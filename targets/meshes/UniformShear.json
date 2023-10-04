@@ -1,0 +1,62 @@
+{	
+	"MeshName": "UniformShear.msh",
+
+    "CreateMsh": false,
+
+	"HdivType": 0,
+
+	"DisppOrder": 1, // approximation order for velocity
+
+	"LambdapOrder": 0, // approximation order for traction
+
+	"Dim": 2,
+
+	"Resolution": 0,
+
+    "StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Elastic_Domain",
+			"matID": 1,
+			"E": 1,
+            "nu": 0
+		}
+	],
+
+	"NormalBoundary":[
+        {
+			"name": "ZeroNormalDisplacement", // name of boundary condition
+			"type": 0, // type: 0 -> Normal Displacement, 1 -> Tangential Displacement, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 2
+		},
+        {
+			"name": "ZeroNormalStress", // name of boundary condition
+			"type": 2, // type: 0 -> Normal Displacement, 1 -> Tangential Displacement, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 3
+		}
+	],
+
+	"TangentialBoundary": [
+        {
+			"name": "ZeroTangentialDisplacement", // name of boundary condition
+			"type": 1, // type: 0 -> Normal Displacement, 1 -> Tangential Displacement, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [0.0, 0.0, 0.0],
+			"matID": 4
+		},
+        {
+			"name": "UnitTangentialDisplacement", // name of boundary condition
+			"type": 3, // type: 0 -> Normal Displacement, 1 -> Tangential Displacement, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [1.0, 0.0, 0.0],
+			"matID": 5
+		}
+	]
+}
+
+
+
+
+
+

@@ -7,3 +7,6 @@ target_link_libraries(1m-module PRIVATE libproject)
 
 add_executable(1m-module-mixed 1m-module-mixed.cpp ProblemData.h ProblemData.cpp json.hpp)
 target_link_libraries(1m-module-mixed PRIVATE libproject)
+
+add_executable(TestSaddlePermute test-saddle-permute.cpp ProblemData.h ProblemData.cpp json.hpp)
+target_link_libraries(TestSaddlePermute PRIVATE libproject)
