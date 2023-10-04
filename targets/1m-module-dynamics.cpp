@@ -51,6 +51,11 @@ static TPZLogger logger("pz.1mmodule");
 
 
 int main(int argc, char *argv[]) {
+    
+    // TODO: FOR NOW THIS FILE IS JUST A H1 NORMAL ELASTOSTATIC APPROXIMATION.
+    //       THIS SHOULD BE CHANGED TO CALCULATE THE MASS MATRIX AND EIGENVALUES/EIGENMODES
+    
+    
 #ifdef PZ_LOG
     TPZLogger::InitializePZLOG();
 #endif
@@ -59,8 +64,8 @@ int main(int argc, char *argv[]) {
     gRefDBase.InitializeRefPatterns();
     
     // Reading problem data from json
-    std::string jsonfilename = "1m-module-init.json";
-//    std::string jsonfilename = "1m-module-lid.json";
+//    std::string jsonfilename = "1m-module-init.json";
+    std::string jsonfilename = "1m-module-lid.json";
     if(argc > 1) jsonfilename = std::string(argv[1]);
     ProblemData problemdata;
     problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);
@@ -78,6 +83,8 @@ int main(int argc, char *argv[]) {
         int ndiv = 2;
         gmesh = CreateGMesh(ndiv);
     }
+    
+    gmesh->Element(50)->PrintVTK("../");
     
     printVTKWJacInfo("gmesh_jac_before_cyl.vtk",gmesh);
     ChangeElsToCylMap(gmesh);

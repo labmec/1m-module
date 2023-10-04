@@ -2,11 +2,11 @@
 #   ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(MY_HEADERS
-  TPZMixedModelProblem.h
+  ProblemData.h
 )
 
 set(MY_SRCS
-  TPZMixedModelProblem.cpp
+  ProblemData.cpp json.hpp
 )
 
 # let us create a config file with the directory containing the meshes

@@ -9,7 +9,6 @@
 #include "TPZVTKGeoMesh.h"
 #include "pzcmesh.h"
 #include <DarcyFlow/TPZMixedDarcyFlow.h>
-#include "TPZMixedModelProblem.h"
 #include <TPZNullMaterial.h>
 #include <pzbuildmultiphysicsmesh.h>
 #include <pzskylstrmatrix.h>
@@ -597,7 +596,7 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m)
         if (compEl->Dimension() != dim)
             continue;
 
-        int64_t numConnectExt = 0;
+        int numConnectExt = 1;
         int nConnect = compEl->NConnects();
 
         for (int ic = nConnect - numConnectExt; ic < nConnect; ic++)
