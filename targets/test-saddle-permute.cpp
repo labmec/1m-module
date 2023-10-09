@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     gRefDBase.InitializeRefPatterns();
 
     // Reading problem data from json
-    std::string jsonfilename = "UniformShear.json";
+    std::string jsonfilename = "UniformShear3D.json";
     if (argc > 1)
         jsonfilename = std::string(argv[1]);
     ProblemData problemdata;
@@ -167,7 +167,8 @@ int main(int argc, char *argv[])
     // }
     // Analysis
     // Solve Multiphysics
-    TPZLinearAnalysis an(cmesh_m, RenumType::ESloan);
+    TPZLinearAnalysis an(cmesh_m, RenumType::ENone);
+    cmesh_m->SaddlePermute();
     {
         std::ofstream out("cmesh.txt");
         cmesh_m->Print(out);
@@ -177,6 +178,8 @@ int main(int argc, char *argv[])
     PrintResults(an, cmesh_m);
     
     // deleting stuff
+    if (cmesh_m)
+        delete cmesh_m;
     if (cmesh_u)
         delete cmesh_u;
     if (cmesh_p)
@@ -185,8 +188,6 @@ int main(int argc, char *argv[])
         delete cmesh_g;
     if (cmesh_pm)
         delete cmesh_pm;
-    if (cmesh_m)
-        delete cmesh_m;
     if (gmesh)
         delete gmesh;
 
@@ -322,6 +323,13 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
                 intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 1);
             }
         }
+
+        int64_t ncon = cmesh_u->NConnects();
+        for (int64_t i = 0; i < ncon; i++)
+        {
+            TPZConnect &newnod = cmesh_u->ConnectVec()[i];
+            newnod.SetLagrangeMultiplier(1);
+        }
         gmesh->ResetReference();
     }
 
@@ -400,12 +408,12 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_p->SetDimModel(simData->Dim() - 1);
         cmesh_p->AutoBuild(materialIDs);
 
-        int64_t ncon = cmesh_p->NConnects();
-        for (int64_t i = 0; i < ncon; i++)
-        {
-            TPZConnect &newnod = cmesh_p->ConnectVec()[i];
-            newnod.SetLagrangeMultiplier(1);
-        }
+        // int64_t ncon = cmesh_p->NConnects();
+        // for (int64_t i = 0; i < ncon; i++)
+        // {
+        //     TPZConnect &newnod = cmesh_p->ConnectVec()[i];
+        //     newnod.SetLagrangeMultiplier(1);
+        // }
 
         gmesh->ResetReference();
     }
@@ -642,12 +650,12 @@ void InsertBCInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, 
 
     int64_t nel = gmesh->NElements();
 
-    TPZVec<int> IDVec(simData->TangentialBCs().size() + 1, 0); //hard coded to account for the null tangential stress
+    TPZVec<int> IDVec(simData->TangentialBCs().size(), 0); //hard coded to account for the null tangential stress
     for (int i = 0; i < simData->TangentialBCs().size(); i++)
     {
         IDVec[i] = simData->TangentialBCs()[i].matID;
     }
-    IDVec[0] = EZeroTangentialStress;
+    //IDVec[0] = EZeroTangentialStress;
 
     // For tangential boundary conditions
     for (auto const &BcMatID : IDVec)
@@ -797,33 +805,28 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     an.Assemble();
     std::cout << "Total time = " << time_ass.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    // TPZFMatrix<REAL> mat71(72,72,0.);
+    // int64_t nrow_null_pivot = 19;
+    // TPZFMatrix<REAL> matSingular(nrow_null_pivot+1,nrow_null_pivot+1,0.);
     // auto mat = an.MatrixSolver<STATE>().Matrix();
-    // mat->GetSub(0,0,72,72,mat71);
-    // std::ofstream matout("matrix.txt");
-    // mat71.Print("mat",matout,EMathematicaInput);
+    // mat->GetSub(0,0,nrow_null_pivot+1,nrow_null_pivot+1,matSingular);
+    // matSingular.PutVal(nrow_null_pivot,nrow_null_pivot,1.);
+
+    // TPZFMatrix<REAL> rhsSingular(nrow_null_pivot+1,1,0.);
+    // rhsSingular.PutVal(nrow_null_pivot,0,1.);
+
+    // matSingular.SolveDirect(rhsSingular, ELDLt);
 
     // TPZFMatrix<REAL> rigidbody(an.Rhs().Rows(),1,0.);
-    // rigidbody(9,0) = 0.3333333333;
-    // rigidbody(10,0) = 0.3333333333;
-    // rigidbody(11,0) = 0.3333333333;
+    // rigidbody.PutSub(0,0,rhsSingular);
 
-    // rigidbody(12,0) = -0.3333333333;
-    // rigidbody(13,0) = -0.3333333333;
-    // rigidbody(14,0) = -0.3333333333;
-
-    // rigidbody(69,0) = -0.3333333333;
-    // rigidbody(70,0) = -0.3333333333;
-    // rigidbody(71,0) = -0.3333333333;
-
-    // {
-    //     std::ofstream out("cmesh_solve.txt");
-    //     cmesh->Print(out);
-    // }
     // an.LoadSolution(rigidbody);
     // cmesh->TransferMultiphysicsSolution();
 
     // PrintResults(an, cmesh);
+    // {
+    //     std::ofstream out("cmesh_solve.txt");
+    //     cmesh->Print(out);
+    // }
 
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;

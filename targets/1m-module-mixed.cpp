@@ -74,7 +74,8 @@ void InsertBCInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, 
 void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TPZGeoMesh *gmesh);
 void printVTKWJacInfo(std::string filename, TPZGeoMesh *gmesh);
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
-void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
+void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData* problem_data);
+void ChangeElsToCylMap(TPZGeoMesh* gmesh);
 
 #ifdef PZ_LOG
 static TPZLogger logger("pz.1mmodule");
@@ -101,35 +102,12 @@ int main(int argc, char *argv[])
     TPZGeoMesh *gmesh = nullptr;
     std::string filename = problemdata.MeshName();
     gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename, &problemdata);
-    CreateBCs(gmesh, &problemdata);
+    // CreateBCs(gmesh, &problemdata);
     InsertLambda(&problemdata, gmesh);
 
-
+    //ChangeElsToCylMap(gmesh);
 
     printVTKWJacInfo("gmesh_jac_before_cyl.vtk", gmesh);
-
-#ifdef PZ_LOG
-//    if (logger.isDebugEnabled()) {
-//        for(int iel = 0 ; iel < gmesh->NElements() ; iel++){
-//            TPZGeoEl* geoel = gmesh->Element(iel);
-//            TPZFNMatrix<9,REAL> gradx(3,3,0.);
-//            TPZManVector<REAL,3> qsicenter(geoel->Dimension(),0.);
-//            geoel->CenterPoint(geoel->NSides()-1, qsicenter);
-//            geoel->GradX(qsicenter, gradx);
-//            std::stringstream sout;
-//            sout << "el = " << iel << std::endl;
-//            gradx.Print(sout);
-//            LOGPZ_DEBUG(logger, sout.str())
-//        }
-//    }
-#endif
-
-    std::ofstream out("gmesh.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
-    {
-        std::ofstream out("gmesh.txt");
-        gmesh->Print(out);
-    }
 
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
@@ -150,6 +128,12 @@ int main(int argc, char *argv[])
     // }
 
     TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh);
+    {
+        std::ofstream out("gmesh.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+        std::ofstream out2("gmesh.txt");
+        gmesh->Print(out2);
+    }
 
     if (problemdata.CondensedElements())
         CondenseElements(&problemdata, cmesh_m);
@@ -158,16 +142,20 @@ int main(int argc, char *argv[])
     // Solve Multiphysics
     TPZLinearAnalysis an(cmesh_m, RenumType::EMetis);
     {
-        std::ofstream out("cmesh.txt");
-        cmesh_m->Print(out);
+        std::ofstream out("cmesh.vtk");
+        TPZVTKGeoMesh::PrintCMeshVTK(cmesh_m, out);
+        std::ofstream out2("cmesh.txt");
+        cmesh_m->Print(out2);
     }
     SolveProblemDirect(an, cmesh_m);
 
     // Post Process
     std::cout << "--------- PostProcess ---------" << std::endl;
-    PrintResults(an, cmesh_m);
+    PrintResults(an, cmesh_m, &problemdata);
 
     // deleting stuff
+    if (cmesh_m)
+        delete cmesh_m;
     if (cmesh_u)
         delete cmesh_u;
     if (cmesh_p)
@@ -176,9 +164,6 @@ int main(int argc, char *argv[])
         delete cmesh_g;
     if (cmesh_pm)
         delete cmesh_pm;
-    if (cmesh_m)
-        delete cmesh_m;
-
     if (gmesh)
         delete gmesh;
 
@@ -293,19 +278,22 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
             materialIDs.insert(bc.matID);
         }
 
-        val2[0] = simData->InternalPressure();
-        auto BCmat = mat->CreateBC(mat, EPressure, 2, val1, val2);
-        cmesh_u->InsertMaterialObject(BCmat);
-        materialIDs.insert(EPressure);
+        //This is hard coded to impose normal displacement and stress
+        // {
+        //     val2[0] = simData->InternalPressure();
+        //     auto BCmat = mat->CreateBC(mat, EPressure, 2, val1, val2);
+        //     cmesh_u->InsertMaterialObject(BCmat);
+        //     materialIDs.insert(EPressure);
 
-        val2[0] = 0.;
-        auto BCmat2 = mat->CreateBC(mat, EZeroNormalDisp, 0, val1, val2);
-        cmesh_u->InsertMaterialObject(BCmat2);
-        materialIDs.insert(EZeroNormalDisp);
+        //     val2[0] = 0.;
+        //     auto BCmat2 = mat->CreateBC(mat, EZeroNormalDisp, 0, val1, val2);
+        //     cmesh_u->InsertMaterialObject(BCmat2);
+        //     materialIDs.insert(EZeroNormalDisp);
 
-        auto BCmat3 = mat->CreateBC(mat, EZeroNormalStress, 2, val1, val2);
-        cmesh_u->InsertMaterialObject(BCmat3);
-        materialIDs.insert(EZeroNormalStress);
+        //     auto BCmat3 = mat->CreateBC(mat, EZeroNormalStress, 2, val1, val2);
+        //     cmesh_u->InsertMaterialObject(BCmat3);
+        //     materialIDs.insert(EZeroNormalStress);
+        // }
 
         cmesh_u->AutoBuild(materialIDs);
 
@@ -327,6 +315,13 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
 
                 intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 1);
             }
+        }
+
+        int64_t ncon = cmesh_u->NConnects();
+        for (int64_t i = 0; i < ncon; i++)
+        {
+            TPZConnect &newnod = cmesh_u->ConnectVec()[i];
+            newnod.SetLagrangeMultiplier(1);
         }
         gmesh->ResetReference();
     }
@@ -391,10 +386,11 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
             materialIDs.insert(bc.matID);
         }
 
-        TPZNullMaterial<>* matLambdaBC = new TPZNullMaterial<>(EZeroTangentialStress);
-        matLambdaBC->SetNStateVariables(simData->Dim() - 1);
-        cmesh_p->InsertMaterialObject(matLambdaBC);
-        materialIDs.insert(EZeroTangentialStress);
+        //This is hard coded to impose tangential displacement
+        // TPZNullMaterial<>* matLambdaBC = new TPZNullMaterial<>(EZeroTangentialDisp);
+        // matLambdaBC->SetNStateVariables(simData->Dim() - 1);
+        // cmesh_p->InsertMaterialObject(matLambdaBC);
+        // materialIDs.insert(EZeroTangentialDisp);
 
         if (simData->LambdapOrder() > 0)
         {
@@ -411,12 +407,12 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_p->SetDimModel(simData->Dim() - 1);
         cmesh_p->AutoBuild(materialIDs);
 
-        int64_t ncon = cmesh_p->NConnects();
-        for (int64_t i = 0; i < ncon; i++)
-        {
-            TPZConnect &newnod = cmesh_p->ConnectVec()[i];
-            newnod.SetLagrangeMultiplier(1);
-        }
+        // int64_t ncon = cmesh_p->NConnects();
+        // for (int64_t i = 0; i < ncon; i++)
+        // {
+        //     TPZConnect &newnod = cmesh_p->ConnectVec()[i];
+        //     newnod.SetLagrangeMultiplier(1);
+        // }
 
         gmesh->ResetReference();
     }
@@ -509,21 +505,21 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
         }
 
         //This is hard coded to impose normal displacement and stress
-        {
-            val2[0] = -1.*simData->InternalPressure();
-            auto BCmat = mat->CreateBC(mat, EPressure, 2, val1, val2);
-            auto matBC = dynamic_cast<TPZBndCondT<STATE> *>(BCmat);
-            cmesh_m->InsertMaterialObject(matBC);
+        // {
+        //     val2[0] = -1.*simData->InternalPressure();
+        //     auto BCmat = mat->CreateBC(mat, EPressure, 2, val1, val2);
+        //     auto matBC = dynamic_cast<TPZBndCondT<STATE> *>(BCmat);
+        //     cmesh_m->InsertMaterialObject(matBC);
 
-            val2[0] = 0.;
-            auto BCmat2 = mat->CreateBC(mat, EZeroNormalDisp, 0, val1, val2);
-            auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(BCmat2);
-            cmesh_m->InsertMaterialObject(matBC2);
+        //     val2[0] = 0.;
+        //     auto BCmat2 = mat->CreateBC(mat, EZeroNormalDisp, 0, val1, val2);
+        //     auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(BCmat2);
+        //     cmesh_m->InsertMaterialObject(matBC2);
 
-            auto BCmat3 = mat->CreateBC(mat, EZeroNormalStress, 2, val1, val2);
-            auto matBC3 = dynamic_cast<TPZBndCondT<STATE> *>(BCmat3);
-            cmesh_m->InsertMaterialObject(matBC3);
-        }
+        //     auto BCmat3 = mat->CreateBC(mat, EZeroNormalStress, 2, val1, val2);
+        //     auto matBC3 = dynamic_cast<TPZBndCondT<STATE> *>(BCmat3);
+        //     cmesh_m->InsertMaterialObject(matBC3);
+        // }
         
         for (const auto &bc : simData->TangentialBCs())
         {
@@ -534,13 +530,13 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
             cmesh_m->InsertMaterialObject(matBC);
         }
 
-        //This is hard coded to impose tangential stress
-        {
-            val2[0] = 0.;
-            auto BCmat = mat->CreateBC(mat, EZeroTangentialStress, 3, val1, val2);
-            auto matBC = dynamic_cast<TPZBndCondT<STATE> *>(BCmat);
-            cmesh_m->InsertMaterialObject(matBC);
-        }
+        // //This is hard coded to impose tangential disp
+        // {
+        //     val2[0] = 0.;
+        //     auto BCmat = mat->CreateBC(mat, EZeroTangentialDisp, 1, val1, val2);
+        //     auto matBC = dynamic_cast<TPZBndCondT<STATE> *>(BCmat);
+        //     cmesh_m->InsertMaterialObject(matBC);
+        // }
 
         // 3 - Material for tangential traction
         TPZNullMaterialCS<> *matLambda = new TPZNullMaterialCS<>(simData->LambdaID());
@@ -678,12 +674,17 @@ void InsertBCInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, 
 
     int64_t nel = gmesh->NElements();
 
-    TPZVec<int> IDVec(simData->TangentialBCs().size() + 1, 0); //hard coded to account for the null tangential stress
+    TPZVec<int> IDVec(simData->TangentialBCs().size(), 0); 
     for (int i = 0; i < simData->TangentialBCs().size(); i++)
     {
         IDVec[i] = simData->TangentialBCs()[i].matID;
     }
-    IDVec[0] = EZeroTangentialStress;
+
+    //hard coded to account for the tangential BCs
+    // {
+    //     IDVec.resize(1);
+    //     IDVec[0] = EZeroTangentialDisp;
+    // }
 
     // For tangential boundary conditions
     for (auto const &BcMatID : IDVec)
@@ -816,8 +817,8 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
 
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
 {
-    TPZSkylineStructMatrix<STATE> matskl(cmesh);
-    // TPZSSpStructMatrix<STATE> matskl(cmesh);
+    // TPZSkylineStructMatrix<STATE> matskl(cmesh);
+    TPZSSpStructMatrix<STATE> matskl(cmesh);
     // TPZFStructMatrix<STATE> matskl(cmesh);
     matskl.SetNumThreads(global_nthread);
     an.SetStructuralMatrix(matskl);
@@ -833,33 +834,28 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     an.Assemble();
     std::cout << "Total time = " << time_ass.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    // TPZFMatrix<REAL> mat71(72,72,0.);
+    // int64_t nrow_null_pivot = 1508;
+    // TPZFMatrix<REAL> matSingular(nrow_null_pivot+1,nrow_null_pivot+1,0.);
     // auto mat = an.MatrixSolver<STATE>().Matrix();
-    // mat->GetSub(0,0,72,72,mat71);
-    // std::ofstream matout("matrix.txt");
-    // mat71.Print("mat",matout,EMathematicaInput);
+    // mat->GetSub(0,0,nrow_null_pivot+1,nrow_null_pivot+1,matSingular);
+    // matSingular.PutVal(nrow_null_pivot,nrow_null_pivot,1.);
+
+    // TPZFMatrix<REAL> rhsSingular(nrow_null_pivot+1,1,0.);
+    // rhsSingular.PutVal(nrow_null_pivot,0,1.);
+
+    // matSingular.SolveDirect(rhsSingular, ELDLt);
 
     // TPZFMatrix<REAL> rigidbody(an.Rhs().Rows(),1,0.);
-    // rigidbody(9,0) = 0.3333333333;
-    // rigidbody(10,0) = 0.3333333333;
-    // rigidbody(11,0) = 0.3333333333;
+    // rigidbody.PutSub(0,0,rhsSingular);
 
-    // rigidbody(12,0) = -0.3333333333;
-    // rigidbody(13,0) = -0.3333333333;
-    // rigidbody(14,0) = -0.3333333333;
-
-    // rigidbody(69,0) = -0.3333333333;
-    // rigidbody(70,0) = -0.3333333333;
-    // rigidbody(71,0) = -0.3333333333;
-
-    // {
-    //     std::ofstream out("cmesh_solve.txt");
-    //     cmesh->Print(out);
-    // }
     // an.LoadSolution(rigidbody);
     // cmesh->TransferMultiphysicsSolution();
 
     // PrintResults(an, cmesh);
+    // {
+    //     std::ofstream out("cmesh_solve.txt");
+    //     cmesh->Print(out);
+    // }
 
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;
@@ -873,13 +869,12 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
-void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
+void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data)
 {
 
     std::cout << "--------- Post Process ---------" << std::endl;
     TPZSimpleTimer postProc("Post processing time");
     const std::string plotfile = "postprocess";
-    constexpr int vtkRes{0};
 
     TPZVec<std::string> fields = {
         // "ExactDisplacement",
@@ -888,7 +883,7 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
         "Stress",
         "Strain",
         "VonMises"};
-    auto vtk = TPZVTKGenerator(cmesh, fields, plotfile, vtkRes);
+    auto vtk = TPZVTKGenerator(cmesh, fields, plotfile, problem_data->Resolution());
     vtk.SetNThreads(global_nthread);
     vtk.Do();
     std::cout << "Total time = " << postProc.ReturnTimeDouble() / 1000. << " s" << std::endl;
@@ -970,17 +965,22 @@ void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
                 if (radius < 343.1 && fabs(normal[2]) < 0.2) //internal surface, where the pressure is applied
                 {
                     TPZGeoElBC(gelside, EPressure);
-                    TPZGeoElBC(gelside, EZeroTangentialStress);
+                    //TPZGeoElBC(gelside, EZeroTangentialStress);
                 }
                 else if (fabs(centerX[1]) < 1.e-3) //symmetric surface, where zero normal displacement and tangential stress is applied
                 {
                     TPZGeoElBC(gelside, EZeroNormalDisp);
-                    TPZGeoElBC(gelside, EZeroTangentialStress);
+                    //TPZGeoElBC(gelside, EZeroTangentialStress);
+                }
+                else if (fabs(centerX[2]) < 1.e-3) //bottom surface
+                {
+                    TPZGeoElBC(gelside, EZeroNormalDisp);
+                    //TPZGeoElBC(gelside, EZeroTangentialDisp);
                 }
                 else //external surface, zero surface traction
                 {
                     TPZGeoElBC(gelside, EZeroNormalStress);
-                    TPZGeoElBC(gelside, EZeroTangentialStress);
+                    //TPZGeoElBC(gelside, EZeroTangentialStress);
                 }
             }
         }
@@ -1023,8 +1023,19 @@ void CreateBCs(TPZGeoMesh *gmesh, const ProblemData *problem_data)
     // }
 
     //We restrain the normal displacement in the z direction to elements at the lid to get rid off rigid body modes
-    gmesh->ElementVec()[3835]->SetMaterialId(EZeroNormalDisp);
-    gmesh->ElementVec()[4229]->SetMaterialId(EZeroNormalDisp);
+    //gmesh->ElementVec()[3835]->SetMaterialId(EZeroNormalDisp);
+    //gmesh->ElementVec()[4229]->SetMaterialId(EZeroNormalDisp);
 
     gmesh->BuildConnectivity();
+}
+
+void ChangeElsToCylMap(TPZGeoMesh* gmesh) {
+    const int64_t nel = gmesh->NElements();
+    TPZManVector<REAL,3> xcenter(3,0.);
+    TPZFNMatrix<9,REAL> axis(3,3,0.);
+    axis.Identity();
+    for(int64_t iel = 0 ; iel < nel ; iel++){
+        TPZGeoEl* geoel = gmesh->Element(iel);
+        TPZChangeEl::ChangeToCylinder(gmesh, iel, xcenter, axis);
+    }
 }

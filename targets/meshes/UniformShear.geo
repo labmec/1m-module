@@ -1,8 +1,10 @@
 // Gmsh project created on Fri Aug 25 11:33:46 2023
 SetFactory("OpenCASCADE");
 
-el = 1;
-ndiv = el + 1;
+elx = 5;
+ely = 5;
+ndivx = elx + 1;
+ndivy = ely + 1;
 
 L = 1.0;
 
@@ -41,13 +43,13 @@ Physical Curve("UnitTangentialDisplacement", 5) = {3};
 
 Transfinite Surface {1} = {1, 2, 3, 4};
 //+
-Transfinite Curve {4} = ndiv Using Progression 1;
+Transfinite Curve {4} = ndivy Using Progression 1;
 //+
-Transfinite Curve {1} = ndiv Using Progression 1;
+Transfinite Curve {1} = ndivx Using Progression 1;
 //+
-Transfinite Curve {2} = ndiv Using Progression 1;
+Transfinite Curve {2} = ndivy Using Progression 1;
 //+
-Transfinite Curve {3} = ndiv Using Progression 1;
+Transfinite Curve {3} = ndivx Using Progression 1;
 //+
 
 Recombine Surface {1};
