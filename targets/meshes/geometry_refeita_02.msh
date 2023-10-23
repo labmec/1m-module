@@ -6,7 +6,7 @@ $PhysicalNames
 2 2 "InternalPressure"
 2 3 "ZeroNormalDisp"
 2 4 "ZeroNormalStress"
-3 1 "Domain"
+3 1 "dom"
 $EndPhysicalNames
 $Entities
 282 441 161 1

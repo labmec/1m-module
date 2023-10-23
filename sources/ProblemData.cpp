@@ -34,8 +34,8 @@ void ProblemData::ReadJson(std::string file){
     if(input.find("Resolution")==input.end()) DebugStop();
     if(input.find("StaticCondensation") == input.end()) DebugStop();
     if(input.find("Domain") == input.end()) DebugStop();
-    if(input.find("NormalBoundary") == input.end()) DebugStop();
-    if(input.find("TangentialBoundary") == input.end()) DebugStop();
+//    if(input.find("NormalBoundary") == input.end()) DebugStop();
+//    if(input.find("TangentialBoundary") == input.end()) DebugStop();
         
     // accessing and assigning values
     fMeshName = input["MeshName"];
