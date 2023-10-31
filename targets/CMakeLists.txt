@@ -8,6 +8,9 @@ target_link_libraries(1m-module PRIVATE libproject)
 add_executable(1m-module-mixed 1m-module-mixed.cpp)
 target_link_libraries(1m-module-mixed PRIVATE libproject)
 
+add_executable(convergence-mixed convergence-mixed.cpp)
+target_link_libraries(convergence-mixed PRIVATE libproject)
+
 add_executable(1m-module-dynamics 1m-module-dynamics.cpp)
 target_link_libraries(1m-module-dynamics PRIVATE libproject)
 

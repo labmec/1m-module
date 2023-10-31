@@ -27,7 +27,6 @@ void ProblemData::ReadJson(std::string file){
     
     // checking infos in the json file
     if(input.find("MeshName") == input.end()) DebugStop();
-    if(input.find("CreateMsh") == input.end()) DebugStop();
     if(input.find("HdivType")==input.end()) DebugStop();
     if(input.find("DisppOrder") == input.end()) DebugStop();
     if(input.find("Dim") == input.end()) DebugStop();
@@ -39,8 +38,6 @@ void ProblemData::ReadJson(std::string file){
         
     // accessing and assigning values
     fMeshName = input["MeshName"];
-    
-    fMshFile = input["CreateMsh"];
     
     fHdivtype = input["HdivType"]; // if hdivtype == -1, then it is H1
     

@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     
     std::cout << "--------- Starting simulation ---------" << std::endl;
     const bool isUseDirectionalRef = false;
-    const bool isUseCylMap = true;
+    const bool isUseCylMap = false;
     const int nUniformRef = 0;
     if(isUseDirectionalRef){
         gRefDBase.InitializeRefPatterns();
