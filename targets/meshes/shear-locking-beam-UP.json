@@ -1,0 +1,68 @@
+{	
+	"MeshName": "shear-beam-locking-UP.msh",
+
+	"CreateMsh": false,
+
+	"HdivType": 0,
+
+	"DisppOrder": 1, // approximation order for displacement
+
+    "LambdapOrder": 0,
+
+	"Dim": 2,
+
+	"Resolution": 4,
+
+	"StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Domain",
+			"matID": 1,
+			"E": 200000,
+			"nu": 0.3
+		}
+	],
+
+	"NormalBoundary":[
+        {
+			"name": "ZeroNormalDisplacement", // name of boundary condition
+			"type": 0, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 2
+		},
+        {
+			"name": "ZeroNormalStress", // name of boundary condition
+			"type": 2, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 3
+		}
+	],
+
+	"TangentialBoundary": [
+        {
+			"name": "ZeroTangentialDisplacement", // name of boundary condition
+			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [0.0, 0.0, 0.0],
+			"matID": 4
+		},
+        {
+			"name": "ZeroTangentialStress", // name of boundary condition
+			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [0.0, 0.0, 0.0],
+			"matID": 5
+		},
+        {
+			"name": "TangentialStress", // name of boundary condition
+			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [0.0, 0.5, 0.0],
+			"matID": 6
+		}
+	]
+}
+
+
+
+
+
+

@@ -3,3 +3,5 @@ build
 .vscode
 LOG
 targets/meshpath_config.h
+*.cfg
+*workspace

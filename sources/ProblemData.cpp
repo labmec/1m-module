@@ -112,8 +112,7 @@ void ProblemData::ReadJson(std::string file){
         fLambdaID = input["LambdaID"];
     }
 
-    if (fCondensedElement && fabs(fDomain[0].nu - 0.5) < 1.e-3) fMeshVector.resize(4);
-    else fMeshVector.resize(2);
+    fCondensedElement? fMeshVector.resize(4) : fMeshVector.resize(2);
 }
 
 void ProblemData::Print(std::ostream& out){

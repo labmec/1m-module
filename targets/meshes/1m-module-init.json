@@ -1,5 +1,5 @@
 {	
-	"MeshName": "geometry_refeita_02.msh",
+	"MeshName": "geometry_refeita_01.msh",
 
 	"CreateMsh": false,
 
@@ -7,7 +7,7 @@
 
 	"DisppOrder": 3, // approximation order for displacement
 
-    "LambdapOrder": 1,
+    "LambdapOrder": 0,
 
 	"Dim": 3,
 

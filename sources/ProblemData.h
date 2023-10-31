@@ -113,7 +113,7 @@ public:
     const int& LambdaID() const{return fLambdaID;}
     void SetLambdaID(int id ){fLambdaID = id;}
     
-    const TPZVec<TPZCompMesh*>& MeshVector() const {return fMeshVector;}
+    TPZVec<TPZCompMesh*>& MeshVector() {return fMeshVector;}
     void SetMeshVector(const TPZVec<TPZCompMesh*>& vec) {fMeshVector = vec;}
 };
 
