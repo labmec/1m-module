@@ -94,16 +94,15 @@ int main(int argc, char *argv[])
     // Reading problem data from json
     std::string jsonfilename = "conv-bishop-";
     int meshref = 1;
+    if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
 //    std::string jsonfilename = "1m-module-init.json";
     
         
-    if (argc > 1)
-        jsonfilename = std::string(argv[1]);
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
     problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);
-
+    
     // Create gmesh
     const int pord = problemdata.DisppOrder();
     TPZGeoMesh *gmesh = nullptr;
@@ -124,11 +123,13 @@ int main(int argc, char *argv[])
     TPZCompMesh *cmesh_p = CreateCMeshP(&problemdata, gmesh);
     TPZCompMesh *cmesh_pm = nullptr;
     TPZCompMesh *cmesh_g = nullptr;
-    // if (problemdata.CondensedElements())
-    // {
-    //     cmesh_pm = CreateCMeshPm(&problemdata, gmesh);
-    //     cmesh_g = CreateCMeshG(&problemdata, gmesh);
-    // }
+    if (problemdata.CondensedElements() and fabs(problemdata.DomainVec()[0].nu - 0.5) < 1.e-3) {
+        cmesh_pm = CreateCMeshPm(&problemdata, gmesh);
+        cmesh_g = CreateCMeshG(&problemdata, gmesh);
+    }
+    else {
+        problemdata.MeshVector().resize(2);
+    }
 
     const REAL young = problemdata.DomainVec()[0].E;
     const REAL poisson = problemdata.DomainVec()[0].nu;
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
     
     // Calculating error
     an.SetExact(elas->ExactSolution());
-    an.SetThreadsForError(0);
+    an.SetThreadsForError(16);
     std::ofstream out("bishop-convergence.txt",std::ios::app);
     out << "\n----------------- Starting new simulation -----------------" << std::endl;
     std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
