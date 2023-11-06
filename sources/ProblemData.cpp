@@ -39,6 +39,8 @@ void ProblemData::ReadJson(std::string file){
     // accessing and assigning values
     fMeshName = input["MeshName"];
     
+    fMshFile = input["CreateMsh"];
+    
     fHdivtype = input["HdivType"]; // if hdivtype == -1, then it is H1
     
     fDisppOrder = input["DisppOrder"];
@@ -46,6 +48,9 @@ void ProblemData::ReadJson(std::string file){
     if(input.find("LambdapOrder") != input.end()){
         fLambdapOrder = input["LambdapOrder"];
     }
+
+    if(input.find("CreateMsh") != input.end())
+        fMshFile = input["CreateMsh"];
     
     fDim = input["Dim"];
     

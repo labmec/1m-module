@@ -1,18 +1,18 @@
-// Gmsh project created on Fri Aug 25 11:33:46 2023
 SetFactory("OpenCASCADE");
 
 el = 1;
-ndiv = el + 1;
 
-L = 1.0;
+L = 5;
+a = 0.5;
+b = 0.5;
 
-Point(1) = {0.0, 0.0, 0.0, 1.0};
+Point(1) = {a, -b, 0, 1.0};
 //+
-Point(2) = {L, 0.0, 0.0, 1.0};
+Point(2) = {a, -b, L, 1.0};
 //+
-Point(3) = {L, L, 0.0, 1.0};
+Point(3) = {a, b, L, 1.0};
 //+
-Point(4) = {0, L, 0.0, 1.0};
+Point(4) = {a, b, 0, 1.0};
 //+
 
 Line(1) = {1, 2};
@@ -24,29 +24,28 @@ Line(3) = {3, 4};
 Line(4) = {4, 1};
 //+
 
-
 //+
 Curve Loop(1) = {3, 4, 1, 2};
 //+
 Plane Surface(1) = {1};
 //+
-Extrude {0, 0, L} {
+Extrude {-2*a, 0, 0} {
   Surface{1}; 
 }
-
+//
 Physical Volume("Domain", 1) = {1};
 //+
-Physical Surface("ZeroNormalDisplacement", 2) = {4, 1, 6};
+Physical Surface("NormalDisplacement", 2) = {3};
 //+
-Physical Surface("ZeroNormalStress", 3) = {2, 3, 5};
+Physical Surface("NormalStress", 3) = {5,1,2,4,6};
 //+
-Physical Surface("ZeroTangentialDisplacement", 4) = {4, 3, 5};
+Physical Surface("TangentialDisplacement", 4) = {3};
 //+
-Physical Surface("ZeroTangentialStress", 5) = {1, 6};
+Physical Surface("TangentialStress", 5) = {5,1,2,4,6};
 //+
-Physical Surface("UnitTangentialStress", 6) = {2};
-
-Transfinite Curve {4, 6, 7, 5, 3, 9, 12, 2, 1, 8, 11, 10} = ndiv Using Progression 1;
+Transfinite Curve {1,3,7,11} = el+1 Using Progression 1;
+//+
+Transfinite Curve {2,4,5,6,8,9,10,12} = Round(el/5)+1 Using Progression 1;
 //+
 Transfinite Surface {2} = {6, 4, 3, 5};
 //+
@@ -62,6 +61,5 @@ Transfinite Surface {6} = {6, 5, 8, 7};
 //+
 Recombine Surface {2, 3, 6, 5, 1, 4};
 //+
-
 Transfinite Volume{1} = {1, 2, 3, 4, 7, 8, 5, 6};
 //+

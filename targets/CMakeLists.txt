@@ -19,3 +19,12 @@ target_link_libraries(Cooks-membrane-UP PRIVATE libproject)
 
 add_executable(Shear-locking-beam-UP shear-locking-beam-UP.cpp)
 target_link_libraries(Shear-locking-beam-UP PRIVATE libproject)
+
+add_executable(Bishop-beam-UP bishop-beam-UP.cpp)
+target_link_libraries(Bishop-beam-UP PRIVATE libproject)
+
+add_executable(UniformStretch uniform-stretch.cpp)
+target_link_libraries(UniformStretch PRIVATE libproject)
+
+add_executable(SimpleShear simple-shear.cpp)
+target_link_libraries(SimpleShear PRIVATE libproject)

@@ -1,5 +1,5 @@
 {	
-	"MeshName": "UniformShear3D.msh",
+	"MeshName": "UniformTension3D.msh",
 
 	"HdivType": 0,
 
@@ -17,16 +17,16 @@
 		{
 			"name": "Elastic_Domain",
 			"matID": 1,
-			"E": 1,
-            "nu": 0
+			"E": 1.0,
+            "nu": 0.0
 		}
 	],
 
 	"NormalBoundary":[
 		{
-			"name": "ZeroNormalDisplacement", // name of boundary condition
-			"type": 0, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
-			"value": 0.0,
+			"name": "UnitNormalStress", // name of boundary condition
+			"type": 2, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 1.0,
 			"matID": 2
 		},
         {
@@ -34,27 +34,21 @@
 			"type": 2, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
 			"value": 0.0,
 			"matID": 3
+		},
+        {
+			"name": "ZeroNormalDisplacement", // name of boundary condition
+			"type": 0, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 4
 		}
 	],
 
 	"TangentialBoundary": [
         {
-			"name": "ZeroTangentialDisplacement", // name of boundary condition
-			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
-			"value": [0.0, 0.0, 0.0], //For 3D, we have two tangential components
-			"matID": 4
-		},
-        {
 			"name": "ZeroTangentialStress", // name of boundary condition
 			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
 			"value": [0.0, 0.0, 0.0], //For 3D, we have two tangential components
 			"matID": 5
-		},
-        {
-			"name": "UnitTangentialStress", // name of boundary condition
-			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
-			"value": [1.0, 0.0, 0.0], //For 3D, we have two tangential components
-			"matID": 6
 		}
 	]
 }
