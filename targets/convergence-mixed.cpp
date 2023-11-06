@@ -41,6 +41,7 @@
 #include "TPZMatrixSolver.h"
 
 const int global_nthread = 16;
+const int global_pord_bc = 4;
 
 using namespace std;
 
@@ -96,9 +97,8 @@ int main(int argc, char *argv[])
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
-//    std::string jsonfilename = "1m-module-init.json";
+//    jsonfilename = "bishop-beam-UP.json";
     
-        
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
     problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);
@@ -108,6 +108,9 @@ int main(int argc, char *argv[])
     TPZGeoMesh *gmesh = nullptr;
     std::string filename = problemdata.MeshName();
     gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename, &problemdata);
+    
+    TPZCheckGeom geom(gmesh);
+    
     // CreateBCs(gmesh, &problemdata);
     InsertLambda(&problemdata, gmesh);
 
@@ -137,6 +140,7 @@ int main(int argc, char *argv[])
     elas->fE = young;
     elas->fPoisson = poisson;
     elas->fProblemType = TElasticity3DAnalytic::ETestShearMoment;
+//    elas->fProblemType = TElasticity3DAnalytic::EShearYZ;
     
     TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh, elas);
     {
@@ -166,7 +170,7 @@ int main(int argc, char *argv[])
     
     // Calculating error
     an.SetExact(elas->ExactSolution());
-    an.SetThreadsForError(16);
+    an.SetThreadsForError(global_nthread);
     std::ofstream out("bishop-convergence.txt",std::ios::app);
     out << "\n----------------- Starting new simulation -----------------" << std::endl;
     std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
@@ -185,8 +189,9 @@ int main(int argc, char *argv[])
 
     std::cout << "Computed errors." << std::endl;
     // error_sigma - error_energy - error_div_sigma - error_u - error_r - error_as - energy_norm_exact_sol
-    std::cout.precision(15);
-    std::cout.setf(std::ios::fixed);
+    std::cout << "L2 p error | L2 p_ex | L2 u error | L2 u_ex | L2 divu error | L2 divu_ex | L2 sigma error | L2 sigma_Ex" << std::endl;
+//    std::cout.precision(15);
+//    std::cout.setf(std::ios::fixed);
     std::cout << "Errors = ";
     std::cout << Errors << std::endl;
     out << "Errors = ";
@@ -531,7 +536,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
         const REAL poisson = simData->DomainVec()[0].nu;
 
         TPZHybridMixedElasticityUP *mat = new TPZHybridMixedElasticityUP(simData->DomainVec()[0].matID, simData->Dim(), young, poisson, AnalysisType::EGeneral);
-
+        mat->SetExactSol(elas->ExactSolution(), 4);
         cmesh_m->InsertMaterialObject(mat);
 
         // 2. Boundary Conditions
@@ -544,7 +549,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
 
             TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
             auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
-            matBC2->SetForcingFunctionBC(elas->ExactSolution(), 4);
+            matBC2->SetForcingFunctionBC(elas->ExactSolution(), global_pord_bc);
             cmesh_m->InsertMaterialObject(matBC);
         }
 
@@ -571,7 +576,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
 
             TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
             auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
-            matBC2->SetForcingFunctionBC(elas->ExactSolution(), 4);
+            matBC2->SetForcingFunctionBC(elas->ExactSolution(), global_pord_bc);
             cmesh_m->InsertMaterialObject(matBC);
         }
 
@@ -927,7 +932,9 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *proble
         "Displacement",
         "Stress",
         "Strain",
-        "VonMises"};
+        "VonMises",
+        "Pressure"
+    };
     auto vtk = TPZVTKGenerator(cmesh, fields, plotfile, problem_data->Resolution());
     vtk.SetNThreads(global_nthread);
     vtk.Do();

@@ -37,10 +37,8 @@ void ProblemData::ReadJson(std::string file){
 //    if(input.find("TangentialBoundary") == input.end()) DebugStop();
         
     // accessing and assigning values
-    fMeshName = input["MeshName"];
-    
-    fMshFile = input["CreateMsh"];
-    
+    fMeshName = input["MeshName"];    
+   
     fHdivtype = input["HdivType"]; // if hdivtype == -1, then it is H1
     
     fDisppOrder = input["DisppOrder"];
