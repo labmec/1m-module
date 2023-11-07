@@ -532,8 +532,8 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
     // 1. For domain
     if (simData->DomainVec().size() != 0)
     {
-        const REAL young = simData->DomainVec()[0].E;
-        const REAL poisson = simData->DomainVec()[0].nu;
+        const REAL young = elas->fE;
+        const REAL poisson = elas->fPoisson;
 
         TPZHybridMixedElasticityUP *mat = new TPZHybridMixedElasticityUP(simData->DomainVec()[0].matID, simData->Dim(), young, poisson, AnalysisType::EGeneral);
         mat->SetExactSol(elas->ExactSolution(), 4);
