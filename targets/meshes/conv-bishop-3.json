@@ -47,7 +47,7 @@
         {
             "name": "TangentialStress",
             "matID": 5,
-            "type": 3,
+            "type": 1,
             "value": [0.0,0.0,0.0]
         }
 	]

@@ -40,7 +40,7 @@
 #include "pzskylmat.h"
 #include "TPZMatrixSolver.h"
 
-const int global_nthread = 16;
+const int global_nthread = 64;
 const int global_pord_bc = 4;
 
 using namespace std;
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     }
 
     const REAL young = problemdata.DomainVec()[0].E;
-    const REAL poisson = problemdata.DomainVec()[0].nu;
+    const REAL poisson = argc > 2? atof(argv[2]) : problemdata.DomainVec()[0].nu;
     TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
     elas->fE = young;
     elas->fPoisson = poisson;
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     std::ofstream out("bishop-convergence.txt",std::ios::app);
     out << "\n----------------- Starting new simulation -----------------" << std::endl;
     std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
-    out << "meshref" << meshref << std::endl;
+    out << "meshref: " << meshref << ", poisson: " << poisson << std::endl;
     
     TPZMaterial *mat = cmesh_m->FindMaterial(problemdata.DomainVec()[0].matID);
     TPZMatErrorCombinedSpaces<STATE> *materr = dynamic_cast<TPZMatErrorCombinedSpaces<STATE>*>(mat);
