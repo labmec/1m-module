@@ -1,6 +1,6 @@
 SetFactory("OpenCASCADE");
 
-el = 1;
+el = 80;
 
 L = 5;
 a = 0.5;
@@ -41,7 +41,7 @@ Physical Surface("NormalStress", 3) = {5,1,2,4,6};
 //+
 Physical Surface("TangentialDisplacement", 4) = {3};
 //+
-Physical Surface("TangentialStress", 5) = {5,1,2,4,6};
+Physical Surface("TangentialStress", 5) = {5};
 //+
 Transfinite Curve {1,3,7,11} = el+1 Using Progression 1;
 //+

@@ -40,7 +40,7 @@
 #include "pzskylmat.h"
 #include "TPZMatrixSolver.h"
 
-const int global_nthread = 64;
+const int global_nthread = 8;
 const int global_pord_bc = 4;
 
 using namespace std;
@@ -76,7 +76,7 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m);
 void InsertBCInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TPZGeoMesh *gmesh);
 void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TPZGeoMesh *gmesh);
 void printVTKWJacInfo(std::string filename, TPZGeoMesh *gmesh);
-void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh);
+void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data);
 void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData* problem_data);
 void ChangeElsToCylMap(TPZGeoMesh* gmesh);
 
@@ -94,10 +94,10 @@ int main(int argc, char *argv[])
 
     // Reading problem data from json
     std::string jsonfilename = "conv-bishop-";
-    int meshref = 1;
+    int meshref = 3;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
-//    jsonfilename = "bishop-beam-UP.json";
+    jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -114,6 +114,13 @@ int main(int argc, char *argv[])
     // CreateBCs(gmesh, &problemdata);
     InsertLambda(&problemdata, gmesh);
 
+    const REAL young = problemdata.DomainVec()[0].E;
+    const REAL poisson = argc > 2? atof(argv[2]) : problemdata.DomainVec()[0].nu;
+    TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
+    elas->fE = young;
+    elas->fPoisson = poisson;
+    elas->fProblemType = TElasticity3DAnalytic::ETestShearMoment;
+
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
         DebugStop(); // Please implement the next lines correctly if many domains
@@ -124,23 +131,21 @@ int main(int argc, char *argv[])
         cmesh_u->Print(out);
     }
     TPZCompMesh *cmesh_p = CreateCMeshP(&problemdata, gmesh);
+    {
+        std::ofstream out("cmesh_p.vtk");
+        TPZVTKGeoMesh::PrintCMeshVTK(cmesh_p, out);
+        std::ofstream out2("cmesh_p.txt");
+        cmesh_p->Print(out2);
+    }
     TPZCompMesh *cmesh_pm = nullptr;
     TPZCompMesh *cmesh_g = nullptr;
-    if (problemdata.CondensedElements() and fabs(problemdata.DomainVec()[0].nu - 0.5) < 1.e-3) {
-        cmesh_pm = CreateCMeshPm(&problemdata, gmesh);
+    if (problemdata.CondensedElements() and fabs(poisson - 0.5) < 1.e-3) {
         cmesh_g = CreateCMeshG(&problemdata, gmesh);
+        cmesh_pm = CreateCMeshPm(&problemdata, gmesh);
     }
     else {
         problemdata.MeshVector().resize(2);
     }
-
-    const REAL young = problemdata.DomainVec()[0].E;
-    const REAL poisson = argc > 2? atof(argv[2]) : problemdata.DomainVec()[0].nu;
-    TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
-    elas->fE = young;
-    elas->fPoisson = poisson;
-    elas->fProblemType = TElasticity3DAnalytic::ETestShearMoment;
-//    elas->fProblemType = TElasticity3DAnalytic::EShearYZ;
     
     TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh, elas);
     {
@@ -162,7 +167,7 @@ int main(int argc, char *argv[])
         std::ofstream out2("cmesh.txt");
         cmesh_m->Print(out2);
     }
-    SolveProblemDirect(an, cmesh_m);
+    SolveProblemDirect(an, cmesh_m, &problemdata);
 
     // Post Process
     std::cout << "--------- PostProcess ---------" << std::endl;
@@ -417,6 +422,13 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
 
         materialIDs.clear();
 
+        int64_t ncon = cmesh_p->NConnects();
+        for (int64_t i = 0; i < ncon; i++)
+        {
+            TPZConnect &newnod = cmesh_p->ConnectVec()[i];
+            newnod.SetLagrangeMultiplier(2);
+        }
+
         // matlambda traction material
         auto matLambda = new TPZNullMaterial<>(simData->LambdaID());
         matLambda->SetNStateVariables(simData->Dim() - 1); // In 3D, lambda has 2 state variables (one at each tangential direction)
@@ -455,13 +467,6 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_p->SetDimModel(simData->Dim() - 1);
         cmesh_p->AutoBuild(materialIDs);
 
-        // int64_t ncon = cmesh_p->NConnects();
-        // for (int64_t i = 0; i < ncon; i++)
-        // {
-        //     TPZConnect &newnod = cmesh_p->ConnectVec()[i];
-        //     newnod.SetLagrangeMultiplier(1);
-        // }
-
         gmesh->ResetReference();
     }
 
@@ -491,7 +496,7 @@ TPZCompMesh *CreateCMeshG(ProblemData *simData, TPZGeoMesh *gmesh)
     cmesh_g->AdjustBoundaryElements();
     cmesh_g->CleanUpUnconnectedNodes();
 
-    simData->MeshVector()[3] = cmesh_g;
+    simData->MeshVector()[2] = cmesh_g;
 
     return cmesh_g;
 }
@@ -513,7 +518,14 @@ TPZCompMesh *CreateCMeshPm(ProblemData *simData, TPZGeoMesh *gmesh)
     cmesh_pm->AdjustBoundaryElements();
     cmesh_pm->CleanUpUnconnectedNodes();
 
-    simData->MeshVector()[2] = cmesh_pm;
+    int64_t ncon = cmesh_pm->NConnects();
+    for (int64_t i = 0; i < ncon; i++)
+    {
+        TPZConnect &newnod = cmesh_pm->ConnectVec()[i];
+        newnod.SetLagrangeMultiplier(3);
+    }
+
+    simData->MeshVector()[3] = cmesh_pm;
 
     return cmesh_pm;
 }
@@ -642,7 +654,7 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m)
         if (compEl->Dimension() != dim)
             continue;
 
-        int numConnectExt = 1;
+        int numConnectExt = (simData->MeshVector().size() == 2)? 0 : 1; //If no meshes were created for distributed flux and mean pressure, we condense all pressures. Otherwise, we do not condense the distributed flux
         int nConnect = compEl->NConnects();
 
         for (int ic = nConnect - numConnectExt; ic < nConnect; ic++)
@@ -865,7 +877,7 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
     std::cout << __PRETTY_FUNCTION__ << "Number of Interfaces Created " << nInterfaceCreated << std::endl;
 }
 
-void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
+void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data)
 {
     // TPZSkylineStructMatrix<STATE> matskl(cmesh);
     TPZSSpStructMatrix<STATE> matskl(cmesh);
@@ -884,10 +896,11 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     an.Assemble();
     std::cout << "Total time = " << time_ass.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    // int64_t nrow_null_pivot = 1508;
+    // int64_t nrow_null_pivot = 1488;
     // TPZFMatrix<REAL> matSingular(nrow_null_pivot+1,nrow_null_pivot+1,0.);
     // auto mat = an.MatrixSolver<STATE>().Matrix();
     // mat->GetSub(0,0,nrow_null_pivot+1,nrow_null_pivot+1,matSingular);
+    // matSingular.Print("mat", std::cout, EMathematicaInput);
     // matSingular.PutVal(nrow_null_pivot,nrow_null_pivot,1.);
 
     // TPZFMatrix<REAL> rhsSingular(nrow_null_pivot+1,1,0.);
@@ -901,7 +914,7 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
     // an.LoadSolution(rigidbody);
     // cmesh->TransferMultiphysicsSolution();
 
-    // PrintResults(an, cmesh);
+    // PrintResults(an, cmesh, problem_data);
     // {
     //     std::ofstream out("cmesh_solve.txt");
     //     cmesh->Print(out);
