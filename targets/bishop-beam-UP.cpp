@@ -483,7 +483,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
         if (1)
         {
             TElasticity3DAnalytic* exact = new TElasticity3DAnalytic();
-            exact->fProblemType = TElasticity3DAnalytic::EShear;
+            exact->fProblemType = TElasticity3DAnalytic::EShearXY;
             exact->fE = young;
             exact->fPoisson = poisson;
             mat->SetExactSol(exact->ExactSolution(), 4);

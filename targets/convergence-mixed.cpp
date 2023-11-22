@@ -94,10 +94,10 @@ int main(int argc, char *argv[])
 
     // Reading problem data from json
     std::string jsonfilename = "conv-bishop-";
-    int meshref = 3;
+    int meshref = 5;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
-    jsonfilename = "bishop-beam-UP.json";
+    //jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -926,6 +926,22 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
+    auto matK = an.MatrixSolver<STATE>().Matrix();
+    auto rhs = an.Rhs();
+    auto res = rhs;
+    matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
+
+    REAL vecnorm = 0.;
+    TPZFMatrix<STATE>& a = res;
+    for (int64_t i = 0; i < res.Rows(); i++)
+        vecnorm += a(i,0);
+
+    {
+        std::ofstream out("residual.txt");
+        res.Print("res", out, EMathematicaInput);
+        out << std::endl;
+        out << "VecNorm: " << vecnorm << std::endl;
+    }
     return;
 }
 
