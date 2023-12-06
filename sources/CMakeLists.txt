@@ -2,11 +2,11 @@
 #   ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(MY_HEADERS
-  ProblemData.h
+  ProblemData.h TPZSparseMatRed.h
 )
 
 set(MY_SRCS
-  ProblemData.cpp json.hpp
+  ProblemData.cpp TPZSparseMatRed.cpp json.hpp
 )
 
 # let us create a config file with the directory containing the meshes

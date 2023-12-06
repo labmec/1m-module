@@ -39,8 +39,11 @@
 #include <pzcondensedcompel.h>
 #include "pzskylmat.h"
 #include "TPZMatrixSolver.h"
+#include "TPZPardisoSolver.h"
+#include "TPZSYSMPPardiso.h"
+#include "TPZSparseMatRed.h"
 
-const int global_nthread = 8;
+const int global_nthread = 64;
 const int global_pord_bc = 4;
 
 using namespace std;
@@ -77,6 +80,7 @@ void InsertBCInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, 
 void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TPZGeoMesh *gmesh);
 void printVTKWJacInfo(std::string filename, TPZGeoMesh *gmesh);
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data);
+void SolveProblemSparseMatRed(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data);
 void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData* problem_data);
 void ChangeElsToCylMap(TPZGeoMesh* gmesh);
 
@@ -94,7 +98,7 @@ int main(int argc, char *argv[])
 
     // Reading problem data from json
     std::string jsonfilename = "conv-bishop-";
-    int meshref = 5;
+    int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
     //jsonfilename = "bishop-beam-UP.json";
@@ -168,6 +172,7 @@ int main(int argc, char *argv[])
         cmesh_m->Print(out2);
     }
     SolveProblemDirect(an, cmesh_m, &problemdata);
+    // SolveProblemSparseMatRed(an, cmesh_m, &problemdata);
 
     // Post Process
     std::cout << "--------- PostProcess ---------" << std::endl;
@@ -374,7 +379,20 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
         for (int64_t i = 0; i < ncon; i++)
         {
             TPZConnect &newnod = cmesh_u->ConnectVec()[i];
-            newnod.SetLagrangeMultiplier(1);
+            newnod.SetLagrangeMultiplier(2);
+        }
+        for (auto& cel : cmesh_u->ElementVec())
+        {
+            int mat = cel->Reference()->MaterialId();
+            if (mat == 2) //big number
+            {
+                ncon = cel->NConnects();
+                for (int i = 0; i < ncon; i++)
+                {
+                    TPZConnect& con = cel->Connect(i);
+                    con.SetLagrangeMultiplier(0);
+                }
+            }
         }
         gmesh->ResetReference();
     }
@@ -426,7 +444,7 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         for (int64_t i = 0; i < ncon; i++)
         {
             TPZConnect &newnod = cmesh_p->ConnectVec()[i];
-            newnod.SetLagrangeMultiplier(2);
+            newnod.SetLagrangeMultiplier(3);
         }
 
         // matlambda traction material
@@ -468,6 +486,14 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_p->AutoBuild(materialIDs);
 
         gmesh->ResetReference();
+
+        ncon = cmesh_p->NConnects();
+        for (int64_t i = 0; i < ncon; i++)
+        {
+            TPZConnect &newnod = cmesh_p->ConnectVec()[i];
+            if (newnod.LagrangeMultiplier() == 0)
+                newnod.SetLagrangeMultiplier(1);
+        }
     }
 
     cmesh_p->ExpandSolution();
@@ -522,7 +548,7 @@ TPZCompMesh *CreateCMeshPm(ProblemData *simData, TPZGeoMesh *gmesh)
     for (int64_t i = 0; i < ncon; i++)
     {
         TPZConnect &newnod = cmesh_pm->ConnectVec()[i];
-        newnod.SetLagrangeMultiplier(3);
+        newnod.SetLagrangeMultiplier(4);
     }
 
     simData->MeshVector()[3] = cmesh_pm;
@@ -888,8 +914,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     /// Setting a direct solver
     TPZStepSolver<STATE> step;
     step.SetDirect(ELDLt); // ELU //ECholesky // ELDLt
-    an.SetSolver(step);
 
+    an.SetSolver(step);
     // assembles the system
     std::cout << "--------- Assemble ---------" << std::endl;
     TPZSimpleTimer time_ass;
@@ -919,30 +945,132 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     //     std::ofstream out("cmesh_solve.txt");
     //     cmesh->Print(out);
     // }
+    // auto *pardiso = an.MatrixSolver<STATE>().GetPardisoControl();
 
+    // if (pardiso)
+    // {
+    //     pardiso->SetMessageLevel(1);
+    //     constexpr auto sys_type = SymProp::Sym;
+    //     constexpr auto prop = TPZPardisoSolver<STATE>::MProperty::EIndefinite;
+    //     pardiso->SetMatrixType(sys_type,prop);
+    //     TPZManVector<long long, 64> param = pardiso->GetParam();
+    //     param[3] = 0;
+    //     param[4] = 0;
+    //     param[9] = 8;
+    //     param[26] = 1;
+    //     param[59] = 0;
+    //     pardiso->SetParam(param);
+    // }
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;
     TPZSimpleTimer time_sol;
+    // auto matK = an.MatrixSolver<STATE>().Matrix();
+    // auto& rhs = an.Rhs();
+    // {
+    //     std::ofstream out("system.txt");
+    //     (*matK).Print("mat", out, EMathematicaInput); out << std::endl;
+    //     rhs.Print("rhs", out, EMathematicaInput); out << std::endl;
+    // }
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    auto matK = an.MatrixSolver<STATE>().Matrix();
-    auto rhs = an.Rhs();
-    auto res = rhs;
-    matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
+    // auto res = rhs;
+    // matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
 
-    REAL vecnorm = 0.;
-    TPZFMatrix<STATE>& a = res;
-    for (int64_t i = 0; i < res.Rows(); i++)
-        vecnorm += a(i,0);
+    // REAL vecnorm = 0.;
+    // TPZFMatrix<STATE>& a = res;
+    // an.Solution() = res;
+    // an.LoadSolution();
+    // cmesh->TransferMultiphysicsSolution();
+
+    // PrintResults(an, cmesh, problem_data);
+    // {
+    //     std::ofstream out("cmesh_solve.txt");
+    //     cmesh->Print(out);
+    // }
+
+    // for (int64_t i = 0; i < res.Rows(); i++)
+    //     vecnorm += a(i,0)*a(i,0);
+    // vecnorm = sqrt(vecnorm);
+    // {
+    //     std::ofstream out("residual.txt");
+    //     res.Print("res", out, EMathematicaInput);
+    //     out << std::endl;
+    //     out << "VecNorm: " << vecnorm << std::endl;
+    // }
+    return;
+}
+
+void SolveProblemSparseMatRed(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data)
+{
+    int dimension = cmesh->Dimension();
+
+    // Primeiro cria a matriz auxiliar K00 - que será decomposta
+    TPZSYsmpMatrixPardiso<REAL> K00;
+
+    TPZStepSolver<STATE> step;
+    step.SetDirect(ECholesky); // ELU //ECholesky // ELDLt
+    an.SetSolver(step);
+    step.SetMatrix(&K00);
+
+    // Cria a matriz esparsa
+    std::set<int> firstMaterials = {2};
+    TPZSparseMatRed<STATE> *matRed = new TPZSparseMatRed<STATE>(cmesh, firstMaterials, TPZSparseMatRed<STATE>::EMaterial);
 
     {
-        std::ofstream out("residual.txt");
-        res.Print("res", out, EMathematicaInput);
-        out << std::endl;
-        out << "VecNorm: " << vecnorm << std::endl;
+        std::ofstream out("cmesh.vtk");
+        TPZVTKGeoMesh::PrintCMeshVTK(cmesh, out);
+        std::ofstream out2("cmesh.txt");
+        cmesh->Print(out2);
     }
-    return;
+
+    std::cout << "Allocating Sub Matrices ...\n";
+    
+    // Transfere as submatrizes da matriz auxiliar para a matriz correta.
+    matRed->SetSolver(&step);
+    K00.Resize(matRed->Dim0(), matRed->Dim0());
+    matRed->AllocateSubMatrices(cmesh);
+
+    // Compute the number of equations in the system
+    int64_t nEqFull = cmesh->NEquations();
+    int64_t nEq00 = matRed->Dim0();
+    int64_t nEq11 = matRed->Dim1();
+
+    std::cout << "NUMBER OF EQUATIONS:\n "
+              << "Full problem = " << nEqFull << ", K00 = " << nEq00 << ", K11 = " << nEq11 << std::endl;
+
+    // Create the RHS vectors
+    TPZFMatrix<STATE> rhsFull(nEqFull, 1, 0.);
+    TPZFMatrix<STATE> rhs1(nEq11, 1, 0.);
+
+    // Creates the problem matrix
+    TPZSSpStructMatrix<STATE, TPZStructMatrixOR<STATE>> Stiffness(cmesh);
+    Stiffness.SetNumThreads(0);
+
+    TPZAutoPointer<TPZGuiInterface> guiInterface;
+
+    an.SetStructuralMatrix(Stiffness);
+
+    // Monta a matriz
+    rhsFull.Zero();
+    Stiffness.Assemble(*matRed, rhsFull, guiInterface);
+
+    matRed->SetF(rhsFull);
+    matRed->SetReduced();
+
+    // Decomposes the reduced matrix
+    matRed->F1Red(rhs1);
+
+    TPZSimpleTimer time_sol;
+    TPZSYsmpMatrixPardiso<REAL> K11 = matRed->K11();
+    K11.SolveDirect(rhs1, ELDLt);
+    std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
+
+    TPZFMatrix<STATE> result(nEqFull,1,0.);
+    matRed->UGlobal(rhs1, result);
+
+    an.Solution() = result;
+    an.LoadSolution();
 }
 
 // ---------------------------------------------------------------------
