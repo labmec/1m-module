@@ -45,9 +45,15 @@
             "value": [0.0,0.0,0.0]
         },
         {
-            "name": "TangentialStress",
+            "name": "EndShear",
             "matID": 5,
             "type": 1,
+            "value": [0.0,0.0,0.0]
+        },
+        {
+            "name": "TangentialStress",
+            "matID": 6,
+            "type": 3,
             "value": [0.0,0.0,0.0]
         }
 	]

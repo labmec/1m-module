@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
-    //jsonfilename = "bishop-beam-UP.json";
+    jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
