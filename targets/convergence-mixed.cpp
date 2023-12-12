@@ -100,8 +100,8 @@ int main(int argc, char *argv[])
     std::string jsonfilename = "conv-bishop-";
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
-    jsonfilename += to_string(meshref) + "-hex.json";
-    // jsonfilename = "bishop-beam-UP.json";
+    jsonfilename += to_string(meshref) + "-tet.json";
+    //jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;

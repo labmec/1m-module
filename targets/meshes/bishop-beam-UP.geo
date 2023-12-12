@@ -1,6 +1,6 @@
 SetFactory("OpenCASCADE");
 
-el = 10;
+el = 80;
 
 L = 5;
 a = 0.5;
@@ -29,7 +29,7 @@ Curve Loop(1) = {4,1,2,3};
 Plane Surface(1) = {1};
 //+
 Extrude {2*a, 0, 0} {
-  Surface{1}; Layers{el/5}; Recombine;
+  Surface{1}; Layers{el/5}; //Recombine;
 }
 //+
 
@@ -37,7 +37,7 @@ Physical Volume("Domain", 1) = {1};
 //+
 Physical Surface("NormalDisplacement", 2) = {2};
 //+
-Physical Surface("NormalStress", 3) = {4};
+Physical Surface("NormalStress", 3) = {4,1,3,5,6};
 //+
 Physical Surface("TangentialDisplacement", 4) = {2};
 //+
@@ -61,7 +61,7 @@ Transfinite Surface {5} = {5, 4, 3, 8} Left;
 //+
 Transfinite Surface {6} = {5, 8, 7, 6} Right;
 //+
-Recombine Surface {2, 3, 6, 5, 1, 4};
+//Recombine Surface {2, 3, 6, 5, 1, 4};
 //+
 Transfinite Volume{1} = {1, 2, 3, 4, 6, 7, 8, 5};
 //+
