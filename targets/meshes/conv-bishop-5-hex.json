@@ -1,0 +1,66 @@
+{	
+	"MeshName": "Bishop-beam-5-hex.msh",
+
+    "HdivType": 0,
+
+	"DisppOrder": 2, // approximation order for displacement
+
+    "LambdapOrder": 1,
+
+	"Dim": 3,
+
+	"Resolution": 2,
+
+	"StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Domain",
+			"matID": 1,
+			"E": 1.0,
+			"nu": 0.5
+		}
+	],
+
+	"NormalBoundary":[
+        {
+            "name": "NormalDisplacement",
+            "matID": 2,
+            "type": 0,
+            "value": 0.0
+        },
+        {
+            "name": "NormalStress",
+            "matID": 3,
+            "type": 2,
+            "value": 0.0
+        }
+	],
+
+	"TangentialBoundary": [
+        {
+            "name": "TangentialDisplacement",
+            "matID": 4,
+            "type": 1,
+            "value": [0.0,0.0,0.0]
+        },
+        {
+            "name": "EndShear",
+            "matID": 5,
+            "type": 1,
+            "value": [0.0,0.0,0.0]
+        },
+        {
+            "name": "TangentialStress",
+            "matID": 6,
+            "type": 3,
+            "value": [0.0,0.0,0.0]
+        }
+	]
+}
+
+
+
+
+
+
