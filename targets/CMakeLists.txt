@@ -28,3 +28,6 @@ target_link_libraries(UniformStretch PRIVATE libproject)
 
 add_executable(SimpleShear simple-shear.cpp)
 target_link_libraries(SimpleShear PRIVATE libproject)
+
+add_executable(FullyHybrid fully-hybrid.cpp)
+target_link_libraries(FullyHybrid PRIVATE libproject)
