@@ -129,7 +129,7 @@ where
 \begin_layout Standard
 \begin_inset Formula 
 \[
-\sigma=2\mu\epsilon_{d}-p\mathbf{I},
+\sigma=2\mu\epsilon-p\mathbf{I},
 \]
 
 \end_inset
@@ -155,16 +155,16 @@ are the Lame parameters,
 \end_inset
 
  and 
-\begin_inset Formula $\epsilon_{d}$
+\begin_inset Formula $\epsilon$
 \end_inset
 
- is the deviatoric strain tensor defined as:
+ is the strain tensor defined as:
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \[
-\epsilon_{d}=\epsilon-\frac{1}{3}Tr(\epsilon)
+\epsilon(\mathbf{u})=\frac{\nabla\mathbf{u}+\nabla\mathbf{u}^{T}}{2}
 \]
 
 \end_inset
@@ -316,7 +316,7 @@ Plugging the formula for
 \begin{equation}
 \begin{cases}
 \begin{array}{ccccc}
-\int_{\Omega}\nabla\mathbf{v}\cdot\left(2\mu\epsilon_{d}-p\mathbf{I}\right)\ \partial\Omega & = & \int_{\partial\Omega_{N}}\mathbf{v}\cdot\mathbf{g}\ d\partial\Omega+\int_{\Omega}\mathbf{v}\cdot\mathbf{b}\ \partial\Omega &  & \forall\mathbf{v}\in\mathcal{V}\\
+\int_{\Omega}\nabla\mathbf{v}\cdot\left(2\mu\epsilon-p\mathbf{I}\right)\ \partial\Omega & = & \int_{\partial\Omega_{N}}\mathbf{v}\cdot\mathbf{g}\ d\partial\Omega+\int_{\Omega}\mathbf{v}\cdot\mathbf{b}\ \partial\Omega &  & \forall\mathbf{v}\in\mathcal{V}\\
 -\int_{\Omega}q\nabla\cdot\mathbf{u}\ \partial\Omega-\int_{\Omega}q\frac{1}{\kappa}p\ d\Omega & = & 0 &  & \forall q\in L^{2}(\Omega)
 \end{array}\end{cases}
 \end{equation}
@@ -335,7 +335,7 @@ And rearranging:
 \begin{equation}
 \begin{cases}
 \begin{array}{ccccc}
-\int_{\Omega}\nabla\mathbf{v}\cdot2\mu\epsilon_{d}-\nabla\mathbf{v}\cdot p\mathbf{I}\ \partial\Omega & = & \int_{\partial\Omega_{N}}\mathbf{v}\cdot\mathbf{g}\ d\partial\Omega+\int_{\Omega}\mathbf{v}\cdot\mathbf{b}\ \partial\Omega &  & \forall\mathbf{v}\in\mathcal{V}\\
+\int_{\Omega}\nabla\mathbf{v}\cdot2\mu\epsilon-\nabla\mathbf{v}\cdot p\mathbf{I}\ \partial\Omega & = & \int_{\partial\Omega_{N}}\mathbf{v}\cdot\mathbf{g}\ d\partial\Omega+\int_{\Omega}\mathbf{v}\cdot\mathbf{b}\ \partial\Omega &  & \forall\mathbf{v}\in\mathcal{V}\\
 -\int_{\Omega}q\nabla\cdot\mathbf{u}\ \partial\Omega-\int_{\Omega}q\frac{1}{\kappa}p\ d\Omega & = & 0 &  & \forall q\in L^{2}(\Omega)
 \end{array}\end{cases}
 \end{equation}
@@ -354,7 +354,7 @@ Or, using the strain tensor:
 \begin{equation}
 \begin{cases}
 \begin{array}{ccccc}
-\int_{\Omega}\epsilon(\mathbf{v})\cdot2\mu\epsilon_{d}-p\nabla\cdot\mathbf{v}\ \partial\Omega & = & \int_{\partial\Omega_{N}}\mathbf{v}\cdot\mathbf{g}\ d\partial\Omega+\int_{\Omega}\mathbf{v}\cdot\mathbf{b}\ \partial\Omega &  & \forall\mathbf{v}\in\mathcal{V}\\
+\int_{\Omega}\epsilon(\mathbf{v})\cdot2\mu\epsilon(\mathbf{v})-p\nabla\cdot\mathbf{v}\ \partial\Omega & = & \int_{\partial\Omega_{N}}\mathbf{v}\cdot\mathbf{g}\ d\partial\Omega+\int_{\Omega}\mathbf{v}\cdot\mathbf{b}\ \partial\Omega &  & \forall\mathbf{v}\in\mathcal{V}\\
 -\int_{\Omega}q\nabla\cdot\mathbf{u}\ \partial\Omega-\int_{\Omega}q\frac{1}{\kappa}p\ d\Omega & = & 0 &  & \forall q\in L^{2}(\Omega)
 \end{array}\end{cases}
 \end{equation}
