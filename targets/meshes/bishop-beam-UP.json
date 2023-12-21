@@ -1,15 +1,15 @@
 {	
 	"MeshName": "bishop-beam-UP.msh",
 
-    "HdivType": 0,
+    "HdivType": 1,
 
-	"DisppOrder": 5, // approximation order for displacement
+	"DisppOrder": 2, // approximation order for displacement
 
-    "LambdapOrder": 4,
+    "LambdapOrder": 1,
 
 	"Dim": 3,
 
-	"Resolution": 1,
+	"Resolution": 2,
 
 	"StaticCondensation": true,
 
@@ -18,7 +18,7 @@
 			"name": "Domain",
 			"matID": 1,
 			"E": 1.0,
-			"nu": 0.50
+			"nu": 0.3
 		}
 	],
 

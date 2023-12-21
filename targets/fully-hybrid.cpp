@@ -68,7 +68,7 @@ enum EMatid
 
 // functions declaration
 TPZGeoMesh *ReadMeshFromGmsh(std::string file_name, ProblemData *problem_data);
-void InsertLagrandeMultipliers(ProblemData *simData, TPZGeoMesh *gmesh);
+void InsertLagrangeMultipliers(ProblemData *simData, TPZGeoMesh *gmesh);
 TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh);
 TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh);
 TPZCompMesh *CreateCMeshG(ProblemData *simData, TPZGeoMesh *gmesh);
@@ -94,8 +94,11 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "UniformTension.json";
+    std::string jsonfilename = "conv-bishop-";
     int meshref = 1;
+    if(argc > 1) meshref = atoi(argv[1]);
+    jsonfilename += to_string(meshref) + "-tet.json";
+    jsonfilename = "UniformShear.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -107,7 +110,7 @@ int main(int argc, char *argv[])
     std::string filename = problemdata.MeshName();
     gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename, &problemdata);
     
-    InsertLagrandeMultipliers(&problemdata, gmesh);
+    InsertLagrangeMultipliers(&problemdata, gmesh);
     {
         std::ofstream out("gmesh.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
@@ -120,7 +123,8 @@ int main(int argc, char *argv[])
     TElasticity2DAnalytic *elas = new TElasticity2DAnalytic;
     elas->gE = young;
     elas->gPoisson = poisson;
-    elas->fProblemType = TElasticity2DAnalytic::EDispx;
+    elas->fPlaneStress = 0;
+    elas->fProblemType = TElasticity2DAnalytic::EShear;
 
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
@@ -183,38 +187,38 @@ int main(int argc, char *argv[])
     PrintResults(an, cmesh_m, &problemdata);
     
     // Calculating error
-    an.SetExact(elas->ExactSolution());
-    an.SetThreadsForError(global_nthread);
-    std::ofstream out("bishop-convergence.txt",std::ios::app);
-    out << "\n----------------- Starting new simulation -----------------" << std::endl;
-    std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
-    out << "meshref: " << meshref << ", poisson: " << poisson << std::endl;
-    
-    TPZMaterial *mat = cmesh_m->FindMaterial(problemdata.DomainVec()[0].matID);
-    TPZMatErrorCombinedSpaces<STATE> *materr = dynamic_cast<TPZMatErrorCombinedSpaces<STATE>*>(mat);
-    TPZManVector<REAL, 10> Errors(materr->NEvalErrors());
-    
-    bool store_errors = false;
-    std::ofstream ErroOut("myerrors.txt", std::ios::app);
-    std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
-    an.PostProcessError(Errors, store_errors, ErroOut);
-    std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
-    std::cout << "Time PostProc Error = " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()/1000. << " s" << std::endl;
+    if (elas->fProblemType != 0)
+    {
+        an.SetExact(elas->ExactSolution());
+        an.SetThreadsForError(global_nthread);
+        std::ofstream out("bishop-convergence.txt",std::ios::app);
+        out << "\n----------------- Starting new simulation -----------------" << std::endl;
+        std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
+        out << "meshref: " << meshref << ", poisson: " << poisson << std::endl;
+        
+        TPZMaterial *mat = cmesh_m->FindMaterial(problemdata.DomainVec()[0].matID);
+        TPZMatErrorCombinedSpaces<STATE> *materr = dynamic_cast<TPZMatErrorCombinedSpaces<STATE>*>(mat);
+        TPZManVector<REAL, 10> Errors(materr->NEvalErrors());
+        
+        bool store_errors = false;
+        std::ofstream ErroOut("myerrors.txt", std::ios::app);
+        std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+        an.PostProcessError(Errors, store_errors, ErroOut);
+        std::chrono::steady_clock::time_point end2 = std::chrono::steady_clock::now();
+        std::cout << "Time PostProc Error = " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin2).count()/1000. << " s" << std::endl;
 
-    std::cout << "Computed errors." << std::endl;
-    // error_sigma - error_energy - error_div_sigma - error_u - error_r - error_as - energy_norm_exact_sol
-    std::cout << "L2 p error | L2 p_ex | L2 u error | L2 u_ex | L2 divu error | L2 divu_ex | L2 sigma error | L2 sigma_Ex" << std::endl;
-//    std::cout.precision(15);
-//    std::cout.setf(std::ios::fixed);
-    std::cout << "Errors = ";
-    std::cout << Errors << std::endl;
-    out << "Errors = ";
-    out << Errors << std::endl;
-    out << "ErrorsFixedPrecision = ";
-    out.precision(15);
-    out.setf(std::ios::fixed);
-    out << Errors << std::endl;
-
+        std::cout << "Computed errors." << std::endl;
+        std::cout << "L2 p error | L2 p_ex | L2 u error | L2 u_ex | L2 divu error | L2 divu_ex | L2 sigma error | L2 sigma_Ex" << std::endl;
+        std::cout << "Errors = ";
+        std::cout << Errors << std::endl;
+        out << "Errors = ";
+        out << Errors << std::endl;
+        out << "ErrorsFixedPrecision = ";
+        out.precision(15);
+        out.setf(std::ios::fixed);
+        out << Errors << std::endl;
+    }
+    
     // deleting stuff
     if (cmesh_m)
         delete cmesh_m;
@@ -243,7 +247,7 @@ TPZGeoMesh *ReadMeshFromGmsh(std::string file_name, ProblemData *problem_data)
     return gmesh;
 }
 
-void InsertLagrandeMultipliers(ProblemData *simData, TPZGeoMesh *gmesh)
+void InsertLagrangeMultipliers(ProblemData *simData, TPZGeoMesh *gmesh)
 {
     int64_t nEl = gmesh->NElements();
 
@@ -385,7 +389,7 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
                 if (!intercEl)
                     continue;
 
-                intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 1);
+                intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 2);
             }
         }
 
@@ -395,24 +399,12 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
             TPZConnect &newnod = cmesh_u->ConnectVec()[i];
             newnod.SetLagrangeMultiplier(2);
         }
-        for (auto& cel : cmesh_u->ElementVec())
-        {
-            int mat = cel->Reference()->MaterialId();
-            if (mat == 2) //big number
-            {
-                ncon = cel->NConnects();
-                for (int i = 0; i < ncon; i++)
-                {
-                    TPZConnect& con = cel->Connect(i);
-                    con.SetLagrangeMultiplier(0);
-                }
-            }
-        }
         gmesh->ResetReference();
+        materialIDs.clear();
 
         // tangent displacement material
         auto mat_tan = new TPZNullMaterial<>(15);
-        mat_tan->SetNStateVariables(simData->Dim() - 1); // In 3D, there are 2 state variables (one at each tangential direction)
+        //mat_tan->SetNStateVariables(simData->Dim() - 1); // In 3D, there are 2 state variables (one at each tangential direction)
         cmesh_u->InsertMaterialObject(mat_tan);
 
         materialIDs.insert(15);
@@ -427,8 +419,29 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
         {
             TPZConnect &newnod = cmesh_u->ConnectVec()[i];
             if (newnod.LagrangeMultiplier() == 0)
-                newnod.SetLagrangeMultiplier(1);
+                newnod.SetLagrangeMultiplier(3);
         }
+        // for (auto& bc : simData->NormalBCs())
+        // {
+        //     if (bc.type == 0) //big number
+        //     {
+        //         int bc_mat = bc.matID;
+
+        //         for (auto& cel : cmesh_u->ElementVec())
+        //         {
+        //             int mat = cel->Reference()->MaterialId();
+        //             if (mat == bc_mat)
+        //             {
+        //                 ncon = cel->NConnects();
+        //                 for (int i = 0; i < ncon; i++)
+        //                 {
+        //                     TPZConnect& con = cel->Connect(i);
+        //                     con.SetLagrangeMultiplier(0);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         gmesh->ResetReference();
     }
@@ -480,7 +493,7 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         for (int64_t i = 0; i < ncon; i++)
         {
             TPZConnect &newnod = cmesh_p->ConnectVec()[i];
-            newnod.SetLagrangeMultiplier(3);
+            newnod.SetLagrangeMultiplier(4);
         }
 
         // matlambda traction material
@@ -552,6 +565,13 @@ TPZCompMesh *CreateCMeshG(ProblemData *simData, TPZGeoMesh *gmesh)
     cmesh_g->AdjustBoundaryElements();
     cmesh_g->CleanUpUnconnectedNodes();
 
+    int64_t ncon = cmesh_g->NConnects();
+    for (int64_t i = 0; i < ncon; i++)
+    {
+        TPZConnect &newnod = cmesh_g->ConnectVec()[i];
+        newnod.SetLagrangeMultiplier(5);
+    }
+
     simData->MeshVector()[2] = cmesh_g;
 
     return cmesh_g;
@@ -578,7 +598,7 @@ TPZCompMesh *CreateCMeshPm(ProblemData *simData, TPZGeoMesh *gmesh)
     for (int64_t i = 0; i < ncon; i++)
     {
         TPZConnect &newnod = cmesh_pm->ConnectVec()[i];
-        newnod.SetLagrangeMultiplier(4);
+        newnod.SetLagrangeMultiplier(5);
     }
 
     simData->MeshVector()[3] = cmesh_pm;
@@ -603,13 +623,14 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
     {
         REAL young = simData->DomainVec()[0].E;
         REAL poisson = simData->DomainVec()[0].nu;
-        AnalysisType type;
+        AnalysisType type = AnalysisType::EGeneral;
         if (dynamic_cast<TElasticity2DAnalytic*>(sol))
         {
             TElasticity2DAnalytic* elas = dynamic_cast<TElasticity2DAnalytic*>(sol);
             young = elas->gE;
             poisson = elas->gPoisson;
             type = (elas->fPlaneStress)? AnalysisType::EPlaneStress : AnalysisType::EPlaneStrain;
+            if (elas->fProblemType == TElasticity2DAnalytic::ENone) sol = nullptr;
         }
         else if (dynamic_cast<TElasticity3DAnalytic*>(sol))
         {
@@ -617,6 +638,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
             young = elas->fE;
             poisson = elas->fPoisson;
             type = AnalysisType::EGeneral;
+            if (elas->fProblemType == TElasticity3DAnalytic::ENone) sol = nullptr;
         }
 
         TPZHybridMixedElasticityUP *mat = new TPZHybridMixedElasticityUP(simData->DomainVec()[0].matID, simData->Dim(), young, poisson, type);
@@ -1035,23 +1057,72 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     //     (*matK).Print("mat", out, EMathematicaInput); out << std::endl;
     //     rhs.Print("rhs", out, EMathematicaInput); out << std::endl;
     // }
+
+    
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
     // auto res = rhs;
     // matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
 
+    // TPZFMatrix<REAL> sol(cmesh->NEquations(), 1, 0.);
+    // sol(0,0) = -0.0224249;
+    // sol(1,0) = 0.0141943;
+    // sol(2,0) = -0.00757328;
+    // sol(3,0) = -0.012346;
+    // sol(4,0) = -0.015171;
+    // sol(5,0) = 0.00773636;
+    // sol(6,0) = -0.0510465;
+    // sol(7,0) = 0.0223287;
+    // sol(8,0) = -0.00171092;
+    // sol(9,0) = -0.0211483;
+    // sol(10,0) = 0.00581317;
+    // sol(11,0) = 0.0141061;
+    // sol(12,0) = 0.0440576;
+    // sol(13,0) = -0.0167037;
+    // sol(14,0) = 0.00716111;
+    // sol(15,0) = -0.0269923;
+    // sol(16,0) = 0.0240454;
+    // sol(17,0) = -0.002914;
+    // sol(18,0) = 0.0728727;
+    // sol(19,0) = 0.00480341;
+    // sol(20,0) = 0.0116603;
+    // sol(21,0) = -0.0028618;
+    // sol(22,0) = -0.0260365;
+    // sol(23,0) = 0.589075;
+    // sol(24,0) = 0.0119309;
+    // sol(25,0) = -0.0706642;
+    // sol(26,0) = 0.00389931;
+    // sol(27,0) = -0.0141834;
+    // sol(28,0) = 0.809476;
+    // sol(29,0) = 0.0340215;
+    // sol(30,0) = 0.000923353;
+    // sol(31,0) = 0.020572;
+    // sol(32,0) = 0.0221157;
+    // sol(33,0) = 0.481293;
+    // sol(34,0) = -0.007121;
+    // sol(35,0) = 0.230236;
+    // sol(36,0) = -0.0524415;
+    // sol(37,0) = 0.851099;
+    // sol(38,0) = 0.00943363;
+    // sol(39,0) = 1.06479;
+    // sol(40,0) = -0.00749216;
+    // sol(41,0) = -0.00506482;
+    // sol(42,0) = -0.0226905;
+    // sol(43,0) = 0.212071;
+    // sol(44,0) = 0.234237;
+
     // REAL vecnorm = 0.;
     // TPZFMatrix<STATE>& a = res;
-    // an.Solution() = res;
+    // an.Solution() = sol;
     // an.LoadSolution();
     // cmesh->TransferMultiphysicsSolution();
 
-    // PrintResults(an, cmesh, problem_data);
-    // {
-    //     std::ofstream out("cmesh_solve.txt");
-    //     cmesh->Print(out);
-    // }
+    PrintResults(an, cmesh, problem_data);
+    {
+        std::ofstream out("cmesh_solve.txt");
+        cmesh->Print(out);
+    }
 
     // for (int64_t i = 0; i < res.Rows(); i++)
     //     vecnorm += a(i,0)*a(i,0);

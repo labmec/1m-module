@@ -11,7 +11,7 @@
 
 	"Dim": 2,
 
-	"Resolution": 4,
+	"Resolution": 1,
 
     "StaticCondensation": true,
 
@@ -20,7 +20,7 @@
 			"name": "Elastic_Domain",
 			"matID": 1,
 			"E": 1,
-            "nu": 0
+            "nu": 0.5
 		}
 	],
 
