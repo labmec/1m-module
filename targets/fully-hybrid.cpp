@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + "-tet.json";
-    jsonfilename = "UniformShear.json";
+    jsonfilename = "UniformShear3D.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -120,11 +120,11 @@ int main(int argc, char *argv[])
 
     const REAL young = problemdata.DomainVec()[0].E;
     const REAL poisson = argc > 2? atof(argv[2]) : problemdata.DomainVec()[0].nu;
-    TElasticity2DAnalytic *elas = new TElasticity2DAnalytic;
-    elas->gE = young;
-    elas->gPoisson = poisson;
-    elas->fPlaneStress = 0;
-    elas->fProblemType = TElasticity2DAnalytic::EShear;
+    TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
+    elas->fE = young;
+    elas->fPoisson = poisson;
+    //elas->fPlaneStress = 0;
+    elas->fProblemType = TElasticity3DAnalytic::EShearXY;
 
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
@@ -249,10 +249,10 @@ TPZGeoMesh *ReadMeshFromGmsh(std::string file_name, ProblemData *problem_data)
 
 void InsertLagrangeMultipliers(ProblemData *simData, TPZGeoMesh *gmesh)
 {
-    int64_t nEl = gmesh->NElements();
+    int64_t nel = gmesh->NElements();
 
     // We look for two domain neighbour elements 
-    for (int64_t el = 0; el < nEl; el++)
+    for (int64_t el = 0; el < nel; el++)
     {
         TPZGeoEl *geoEl = gmesh->Element(el);
 
@@ -322,6 +322,66 @@ void InsertLagrangeMultipliers(ProblemData *simData, TPZGeoMesh *gmesh)
 
                     TPZGeoElBC(neighbour, 15); //Adding a tangential displacement Lagrange multiplier as a neighbour to the tangential stress element
                 }
+            }
+        }
+    }
+
+    // We look for tangential BCs
+    TPZVec<int> IDVec(simData->TangentialBCs().size(), 0); 
+    for (int i = 0; i < simData->TangentialBCs().size(); i++)
+    {
+        IDVec[i] = simData->TangentialBCs()[i].matID;
+    }
+
+    for (auto const &BcMatID : IDVec)
+    {
+        for (int64_t el = 0; el < nel; el++)
+        {
+            TPZGeoEl *gel = gmesh->Element(el);
+            int meshDim = gmesh->Dimension();
+            int matID = gel->MaterialId();
+
+            if (matID != BcMatID)
+                continue;
+
+            int nsides = gel->NSides();
+            TPZGeoElSide gelSide(gel, nsides - 1);
+            TPZCompElSide celSide = gelSide.Reference();
+
+            TPZStack<TPZGeoElSide> neighbourSet;
+            gelSide.AllNeighbours(neighbourSet);
+
+            int64_t nneighs = neighbourSet.size();
+
+            for (int stack_i = 0; stack_i < nneighs; stack_i++)
+            {
+                TPZGeoElSide neighbour = neighbourSet[stack_i];
+                int neighMatID = neighbour.Element()->MaterialId();
+                TPZCompElSide celNeigh = neighbour.Reference();
+
+                int64_t neighIndex = neighbour.Element()->Index();
+
+                if (neighbour.Element()->Dimension() != meshDim)
+                    continue;
+
+                if (neighbour.Element()->HasSubElement())
+                    DebugStop();
+                
+                TPZGeoElBC(neighbour, simData->InterfaceID()); //Adding an interface as a neighbour to the neighbour element side
+
+                neighbour = neighbour.Neighbour(); //this will return the neighbour interface to the neighbour element side
+                
+                if (neighbour.Element()->MaterialId() != simData->InterfaceID())
+                        DebugStop();
+                
+                TPZGeoElBC(neighbour, simData->LambdaID()); //Adding a tangential stress Lagrange multiplier as a neighbour to the interface element side
+
+                neighbour = neighbour.Neighbour(); //this will return the tangential stress neighbour to the interface element side
+
+                if (neighbour.Element()->MaterialId() != simData->LambdaID())
+                        DebugStop();
+                
+                TPZGeoElBC(neighbour, simData->InterfaceID()); //Adding an interface as a neighbour to the tangential stress
             }
         }
     }
@@ -408,6 +468,16 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_u->InsertMaterialObject(mat_tan);
 
         materialIDs.insert(15);
+
+        // tangential displacement on boundary material
+        for (const auto &bc : simData->TangentialBCs())
+        {
+            auto matBC = new TPZNullMaterial<>(bc.matID);
+            matBC->SetNStateVariables(simData->Dim() - 1);
+            cmesh_u->InsertMaterialObject(matBC);
+
+            materialIDs.insert(bc.matID);
+        }
 
         cmesh_u->ApproxSpace().CreateDisconnectedElements(true);
         cmesh_u->SetDefaultOrder(simData->LambdapOrder());
@@ -503,15 +573,15 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
 
         materialIDs.insert(simData->LambdaID());
 
-        // traction on boundary material
-        for (const auto &bc : simData->TangentialBCs())
-        {
-            auto matLambdaBC = new TPZNullMaterial<>(bc.matID);
-            matLambdaBC->SetNStateVariables(simData->Dim() - 1);
-            cmesh_p->InsertMaterialObject(matLambdaBC);
+        // // traction on boundary material
+        // for (const auto &bc : simData->TangentialBCs())
+        // {
+        //     auto matLambdaBC = new TPZNullMaterial<>(bc.matID);
+        //     matLambdaBC->SetNStateVariables(simData->Dim() - 1);
+        //     cmesh_p->InsertMaterialObject(matLambdaBC);
 
-            materialIDs.insert(bc.matID);
-        }
+        //     materialIDs.insert(bc.matID);
+        // }
 
         if (simData->LambdapOrder() > 0)
         {
@@ -701,7 +771,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
     cmesh_m->InsertMaterialObject(matInterface);
 
     InsertInterfaces(cmesh_m, simData, gmesh);
-    InsertBCInterfaces(cmesh_m, simData, gmesh);
+    // InsertBCInterfaces(cmesh_m, simData, gmesh);
 
     if (simData->CondensedElements())
     {
@@ -722,6 +792,10 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
     groupIndex.reserve(ncompEl);
     TPZStack<TPZElementGroup *> elGroups;
     int count = 0;
+
+    std::set<int> BcsIds;
+    for (int i = 0; i < simData->TangentialBCs().size(); i++)
+        BcsIds.insert(simData->TangentialBCs()[i].matID);
 
     // Creating the element groups for the domain
     for (int64_t el = 0; el < ncompEl; el++)
@@ -790,13 +864,17 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
                         neighbourCompels.push_back(cel_neighbour);
                     }
                 }
-                else //It is a boundary element with some BC applied, so we add all neighbour elements to the group
+                else if (allNeighbours.size() >= 1 && allNeighbours.size() <= 5) //It is a boundary element with some BC applied, so we add all neighbour elements excepet the tangential displacement to the group
                 {
-                    neighbourCompels.reserve(allNeighbours.size());
+                    neighbourCompels.reserve(4); //4 is the maximum number of elements that might be added to the group
                     TPZGeoElSide gel_neighbour = gel_side;
                     for (int i = 0; i < allNeighbours.size(); i++)
                     {
                         gel_neighbour++;
+                        int neigh_matid = gel_neighbour.Element()->MaterialId();
+
+                        if (BcsIds.find(neigh_matid) != BcsIds.end()) continue;
+
                         TPZCompEl* cel_neighbour = gel_neighbour.Element()->Reference();
                         neighbourCompels.push_back(cel_neighbour);
                     }
@@ -916,6 +994,10 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
     int mat_lambda = simData->LambdaID();
     int mat_tan = 15;
 
+    std::set<int> BcsIds;
+    for (int i = 0; i < simData->TangentialBCs().size(); i++)
+        BcsIds.insert(simData->TangentialBCs()[i].matID);
+
     int64_t nel = gmesh->NElements();
 
     for (int64_t el = 0; el < nel; el++)
@@ -969,7 +1051,7 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
                 {
                     int neighbour_matid2 = gel_neighbour3.Element()->MaterialId();
 
-                    if (neighbour_matid2 != 15) continue;
+                    if (neighbour_matid2 != 15 && BcsIds.find(neighbour_matid2) == BcsIds.end()) continue;
 
                     cel_side = gel_neighbour3.Reference(); //Tangential displacement element
                     if (!cel_side) DebugStop();

@@ -48,7 +48,7 @@
 		},
         {
 			"name": "TangentialStress", // name of boundary condition
-			"type": 3, // type: 0 -> Normal Displacement, 1 -> Tangential Displacement, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"type": 1, // type: 0 -> Normal Displacement, 1 -> Tangential Displacement, 2 -> Normal Stress, and 3 -> Tangential Stress 
 			"value": [1.0, 0.0, 0.0],
 			"matID": 5
 		}

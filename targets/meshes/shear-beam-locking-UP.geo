@@ -1,8 +1,8 @@
 // Gmsh project created on Fri Aug 25 11:33:46 2023
 SetFactory("OpenCASCADE");
 
-elx = 7;
-ely = 2;
+elx = 14;
+ely = 4;
 ndivx = elx + 1;
 ndivy = ely + 1;
 

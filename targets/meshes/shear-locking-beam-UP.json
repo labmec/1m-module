@@ -5,15 +5,15 @@
 
 	"HdivType": 0,
 
-	"DisppOrder": 1, // approximation order for displacement
+	"DisppOrder": 1, // approximation order for velocity
 
-    "LambdapOrder": 0,
+	"LambdapOrder": 0, // approximation order for traction
 
 	"Dim": 2,
 
-	"Resolution": 4,
+	"Resolution": 2,
 
-	"StaticCondensation": true,
+    "StaticCondensation": true,
 
 	"Domain": [ // domain data
 		{
@@ -54,8 +54,8 @@
 		},
         {
 			"name": "TangentialStress", // name of boundary condition
-			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
-			"value": [0.0, 0.5, 0.0],
+			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": [0.0, -0.3729, 0.0],
 			"matID": 6
 		}
 	]
