@@ -36,15 +36,13 @@ Extrude {0, 0, L} {
 
 Physical Volume("Domain", 1) = {1};
 //+
-Physical Surface("ZeroNormalDisplacement", 2) = {4, 1, 6};
+Physical Surface("ZeroNormalDisplacement", 2) = {4};
 //+
-Physical Surface("ZeroNormalStress", 3) = {2, 3, 5};
+Physical Surface("ZeroNormalStress", 3) = {1, 2, 3, 5, 6};
 //+
-Physical Surface("ZeroTangentialDisplacement", 4) = {4, 3, 5};
+Physical Surface("ZeroTangentialDisplacement", 4) = {2, 4, 3, 5};
 //+
-Physical Surface("ZeroTangentialStress", 5) = {1, 6};
-//+
-Physical Surface("UnitTangentialStress", 6) = {2};
+Physical Surface("UnitTangentialStress", 5) = {1, 6};
 
 Transfinite Curve {4, 6, 7, 5, 3, 9, 12, 2, 1, 8, 11, 10} = ndiv Using Progression 1;
 //+

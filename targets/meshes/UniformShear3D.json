@@ -1,11 +1,11 @@
 {	
 	"MeshName": "UniformShear3D.msh",
 
-	"HdivType": 0,
+	"HdivType": 1,
 
-	"DisppOrder": 2, // approximation order for velocity
+	"DisppOrder": 1, // approximation order for velocity
 
-	"LambdapOrder": 1, // approximation order for traction
+	"LambdapOrder": 0, // approximation order for traction
 
 	"Dim": 3,
 
@@ -45,16 +45,10 @@
 			"matID": 4
 		},
         {
-			"name": "ZeroTangentialStress", // name of boundary condition
-			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
-			"value": [0.0, 0.0, 0.0], //For 3D, we have two tangential components
-			"matID": 5
-		},
-        {
 			"name": "UnitTangentialStress", // name of boundary condition
-			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
 			"value": [1.0, 0.0, 0.0], //For 3D, we have two tangential components
-			"matID": 6
+			"matID": 5
 		}
 	]
 }

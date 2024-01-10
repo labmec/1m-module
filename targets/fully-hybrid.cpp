@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     elas->fE = young;
     elas->fPoisson = poisson;
     //elas->fPlaneStress = 0;
-    elas->fProblemType = TElasticity3DAnalytic::EShearXY;
+    elas->fProblemType = TElasticity3DAnalytic::ENone;
 
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
