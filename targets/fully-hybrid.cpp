@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     elas->fE = young;
     elas->fPoisson = poisson;
     //elas->fPlaneStress = 0;
-    elas->fProblemType = TElasticity3DAnalytic::ENone;
+    elas->fProblemType = TElasticity3DAnalytic::EShearXY;
 
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
@@ -449,7 +449,7 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
                 if (!intercEl)
                     continue;
 
-                intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 2);
+                intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 1);
             }
         }
 

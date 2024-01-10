@@ -15,13 +15,13 @@ Point(3) = {L, L, 0.0, 1.0};
 Point(4) = {0, L, 0.0, 1.0};
 //+
 
-Line(1) = {1, 2};
+Line(1) = {1, 4};
 //+
-Line(2) = {2, 3};
+Line(2) = {4, 3};
 //+
-Line(3) = {3, 4};
+Line(3) = {3, 2};
 //+
-Line(4) = {4, 1};
+Line(4) = {2, 1};
 //+
 
 
@@ -36,30 +36,33 @@ Extrude {0, 0, L} {
 
 Physical Volume("Domain", 1) = {1};
 //+
-Physical Surface("ZeroNormalDisplacement", 2) = {4};
+Physical Surface("ZeroNormalDisplacement", 2) = {3,5};
 //+
-Physical Surface("ZeroNormalStress", 3) = {1, 2, 3, 5, 6};
+Physical Surface("ZeroNormalStress", 3) = {1, 2, 4, 6};
 //+
-Physical Surface("ZeroTangentialDisplacement", 4) = {2, 4, 3, 5};
+Physical Surface("ZeroTangentialDisplacement", 4) = {3, 2, 4};
 //+
-Physical Surface("UnitTangentialStress", 5) = {1, 6};
+Physical Surface("UnitTangentialStress", 5) = {5};
+//+
+Physical Surface("ZeroTangentialStress", 6) = {1, 6};
 
 Transfinite Curve {4, 6, 7, 5, 3, 9, 12, 2, 1, 8, 11, 10} = ndiv Using Progression 1;
 //+
-Transfinite Surface {2} = {6, 4, 3, 5};
+
 //+
-Transfinite Surface {1} = {1, 2, 3, 4};
+Transfinite Surface {2} = {2, 3, 5, 6};
 //+
-Transfinite Surface {5} = {2, 8, 5, 3};
+Transfinite Surface {5} = {4, 8, 5, 3};
 //+
-Transfinite Surface {3} = {1, 4, 6, 7};
+Transfinite Surface {4} = {4, 1, 7, 8};
 //+
-Transfinite Surface {4} = {1, 7, 8, 2};
+Transfinite Surface {1} = {1, 4, 3, 2};
 //+
-Transfinite Surface {6} = {6, 5, 8, 7};
+Transfinite Surface {6} = {8, 7, 6, 5};
 //+
-Recombine Surface {2, 3, 6, 5, 1, 4};
+Transfinite Surface {3} = {1, 2, 6, 7};
+
+Recombine Surface {1,2,3,4,5,6};
 //+
 
-Transfinite Volume{1} = {1, 2, 3, 4, 7, 8, 5, 6};
-//+
+Transfinite Volume {1};
