@@ -1,8 +1,8 @@
 // Gmsh project created on Fri Aug 25 11:33:46 2023
 SetFactory("OpenCASCADE");
 
-elx = 2;
-ely = 2;
+elx = 1;
+ely = 1;
 ndivx = elx + 1;
 ndivy = ely + 1;
 
@@ -36,9 +36,9 @@ Physical Curve("ZeroNormalDisplacement", 2) = {1};
 //+
 Physical Curve("ZeroNormalStress", 3) = {2,3,4};
 //+
-Physical Curve("ZeroTangentialDisplacement", 4) = {1,2,4};
+Physical Curve("ZeroTangentialDisplacement", 4) = {1};
 //+
-Physical Curve("TangentialStress", 5) = {3};
+Physical Curve("TangentialStress", 5) = {2,3,4};
 //+
 
 Transfinite Surface {1} = {1, 2, 3, 4};

@@ -1,7 +1,7 @@
 {	
 	"MeshName": "bishop-beam-UP.msh",
 
-    "HdivType": 1,
+    "HdivType": 0,
 
 	"DisppOrder": 2, // approximation order for displacement
 
@@ -18,7 +18,7 @@
 			"name": "Domain",
 			"matID": 1,
 			"E": 1.0,
-			"nu": 0.3
+			"nu": 0.5
 		}
 	],
 
@@ -47,7 +47,7 @@
         {
             "name": "EndShear",
             "matID": 5,
-            "type": 1,
+            "type": 3,
             "value": [0.0,0.0,0.0]
         },
         {

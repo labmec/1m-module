@@ -43,7 +43,7 @@
 #include "TPZSYSMPPardiso.h"
 #include "TPZSparseMatRed.h"
 
-const int global_nthread = 0;
+const int global_nthread = 64;
 const int global_pord_bc = 4;
 
 using namespace std;
@@ -97,8 +97,7 @@ int main(int argc, char *argv[])
     std::string jsonfilename = "conv-bishop-";
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
-    jsonfilename += to_string(meshref) + "-tet.json";
-    jsonfilename = "UniformShear3D.json";
+    jsonfilename += to_string(meshref) + "-hex.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -120,11 +119,17 @@ int main(int argc, char *argv[])
 
     const REAL young = problemdata.DomainVec()[0].E;
     const REAL poisson = argc > 2? atof(argv[2]) : problemdata.DomainVec()[0].nu;
+
+    // TElasticity2DAnalytic *elas = new TElasticity2DAnalytic;
+    // elas->gE = young;
+    // elas->gPoisson = poisson;
+    // elas->fPlaneStress = 0;
+    // elas->fProblemType = TElasticity2DAnalytic::EShear;
+
     TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
     elas->fE = young;
     elas->fPoisson = poisson;
-    //elas->fPlaneStress = 0;
-    elas->fProblemType = TElasticity3DAnalytic::EShearXY;
+    elas->fProblemType = TElasticity3DAnalytic::ETestShearMoment;
 
     // Create compmeshes
     if (problemdata.DomainVec().size() > 1)
@@ -449,7 +454,7 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
                 if (!intercEl)
                     continue;
 
-                intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 1);
+                intercEl->ForceSideOrder(compEl->Reference()->NSides() - 1, simData->DisppOrder() + 2);
             }
         }
 
@@ -464,7 +469,7 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
 
         // tangent displacement material
         auto mat_tan = new TPZNullMaterial<>(15);
-        //mat_tan->SetNStateVariables(simData->Dim() - 1); // In 3D, there are 2 state variables (one at each tangential direction)
+        mat_tan->SetNStateVariables(simData->Dim() - 1); // In 3D, there are 2 state variables (one at each tangential direction)
         cmesh_u->InsertMaterialObject(mat_tan);
 
         materialIDs.insert(15);
