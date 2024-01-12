@@ -43,7 +43,7 @@
 #include "TPZSYSMPPardiso.h"
 #include "TPZSparseMatRed.h"
 
-const int global_nthread = 64;
+const int global_nthread = 0;
 const int global_pord_bc = 4;
 
 using namespace std;
@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + "-hex.json";
+    jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -195,7 +196,7 @@ int main(int argc, char *argv[])
     if (elas->fProblemType != 0)
     {
         an.SetExact(elas->ExactSolution());
-        an.SetThreadsForError(global_nthread);
+        an.SetThreadsForError(0);
         std::ofstream out("bishop-convergence.txt",std::ios::app);
         out << "\n----------------- Starting new simulation -----------------" << std::endl;
         std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
@@ -547,7 +548,7 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         }
         else if (simData->HdivType() == HdivType::EStandard)
         {
-            cmesh_p->SetDefaultOrder(simData->DisppOrder() + 1);
+            cmesh_p->SetDefaultOrder(simData->DisppOrder() + 2);
             cmesh_p->SetAllCreateFunctionsContinuous();
         }
 
@@ -801,6 +802,8 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
     std::set<int> BcsIds;
     for (int i = 0; i < simData->TangentialBCs().size(); i++)
         BcsIds.insert(simData->TangentialBCs()[i].matID);
+    for (int i = 0; i < simData->NormalBCs().size(); i++)
+        BcsIds.insert(simData->NormalBCs()[i].matID);
 
     // Creating the element groups for the domain
     for (int64_t el = 0; el < ncompEl; el++)
@@ -871,7 +874,7 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
                 }
                 else if (allNeighbours.size() >= 1 && allNeighbours.size() <= 5) //It is a boundary element with some BC applied, so we add all neighbour elements excepet the tangential displacement to the group
                 {
-                    neighbourCompels.reserve(4); //4 is the maximum number of elements that might be added to the group
+                    neighbourCompels.reserve(3); //3 is the maximum number of elements that might be added to the group
                     TPZGeoElSide gel_neighbour = gel_side;
                     for (int i = 0; i < allNeighbours.size(); i++)
                     {
