@@ -3,9 +3,9 @@
 
     "HdivType": 0,
 
-	"DisppOrder": 2, // approximation order for displacement
+	"DisppOrder": 3, // approximation order for displacement
 
-    "LambdapOrder": 1,
+    "LambdapOrder": 2,
 
 	"Dim": 3,
 
@@ -24,14 +24,20 @@
 
 	"NormalBoundary":[
         {
-            "name": "NormalDisplacement",
+            "name": "ZeroNormalDisplacement",
             "matID": 2,
             "type": 0,
             "value": 0.0
         },
         {
-            "name": "NormalStress",
+            "name": "EndForce",
             "matID": 3,
+            "type": 2,
+            "value": 0.0
+        },
+        {
+            "name": "ZeroNormalStress",
+            "matID": 4,
             "type": 2,
             "value": 0.0
         }
@@ -39,28 +45,22 @@
 
 	"TangentialBoundary": [
         {
-            "name": "TangentialDisplacement",
-            "matID": 4,
+            "name": "ZeroTangentialDisplacement",
+            "matID": 5,
             "type": 1,
             "value": [0.0,0.0,0.0]
         },
         {
             "name": "EndShear",
-            "matID": 5,
+            "matID": 6,
             "type": 3,
             "value": [0.0,0.0,0.0]
         },
         {
-            "name": "TangentialStress",
-            "matID": 6,
+            "name": "ZeroTangentialStress",
+            "matID": 7,
             "type": 3,
             "value": [0.0,0.0,0.0]
         }
 	]
 }
-
-
-
-
-
-

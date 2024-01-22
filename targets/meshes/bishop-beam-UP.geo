@@ -35,15 +35,17 @@ Extrude {2*a, 0, 0} {
 
 Physical Volume("Domain", 1) = {1};
 //+
-Physical Surface("NormalDisplacement", 2) = {2};
+Physical Surface("ZeroNormalDisplacement", 2) = {2};
 //+
-Physical Surface("NormalStress", 3) = {4,1,3,5,6};
+Physical Surface("EndForce", 3) = {4};
 //+
-Physical Surface("TangentialDisplacement", 4) = {2};
+Physical Surface("ZeroNormalStress", 4) = {1,3,5,6};
 //+
-Physical Surface("EndShear", 5) = {4};
+Physical Surface("ZeroTangentialDisplacement", 5) = {2};
 //+
-Physical Surface("TangentialStress", 6) = {1,3,5,6};
+Physical Surface("EndShear", 6) = {4};
+//+
+Physical Surface("ZeroTangentialStress", 7) = {1,3,5,6};
 //+
 Transfinite Curve {1,3,9,12} = el+1 Using Progression 1;
 //+
