@@ -44,7 +44,7 @@
 #include "TPZSparseMatRed.h"
 
 const int global_nthread = 64;
-const int global_pord_bc = 300;
+const int global_pord_bc = 10;
 
 using namespace std;
 
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + "-hex.json";
-    //jsonfilename = "bishop-beam-UP.json";
+    // jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;

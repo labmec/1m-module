@@ -1,6 +1,6 @@
 SetFactory("OpenCASCADE");
 
-el = 80;
+el = 10;
 
 L = 5;
 a = 0.5;
@@ -29,7 +29,7 @@ Curve Loop(1) = {4,1,2,3};
 Plane Surface(1) = {1};
 //+
 Extrude {2*a, 0, 0} {
-  Surface{1}; Layers{el/5}; //Recombine;
+  Surface{1}; Layers{el/5}; Recombine;
 }
 //+
 
@@ -63,7 +63,7 @@ Transfinite Surface {5} = {5, 4, 3, 8} Left;
 //+
 Transfinite Surface {6} = {5, 8, 7, 6} Right;
 //+
-//Recombine Surface {2, 3, 6, 5, 1, 4};
+Recombine Surface {2, 3, 6, 5, 1, 4};
 //+
 Transfinite Volume{1} = {1, 2, 3, 4, 6, 7, 8, 5};
 //+
