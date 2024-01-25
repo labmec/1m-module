@@ -175,7 +175,9 @@ int main(int argc, char *argv[])
     }
 
     if (problemdata.CondensedElements())
+    {
         CondenseElements(&problemdata, cmesh_m, gmesh);
+    }
     {
         std::ofstream out("cmesh_condensed.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_m, out);
@@ -910,6 +912,7 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
 
     //     Creating  condensed elements
     int64_t nenvel = elGroups.NElements();
+    TPZCondensedCompEl::decomposeType = DecomposeType::ELDLt;
     for (int64_t iEnv = 0; iEnv < nenvel; iEnv++)
     {
         TPZElementGroup *elGroup = elGroups[iEnv];
@@ -1140,8 +1143,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;
     TPZSimpleTimer time_sol;
-    // auto matK = an.MatrixSolver<STATE>().Matrix();
-    // auto& rhs = an.Rhs();
+    auto matK = an.MatrixSolver<STATE>().Matrix();
+    auto& rhs = an.Rhs();
     // {
     //     std::ofstream out("system.txt");
     //     (*matK).Print("mat", out, EMathematicaInput); out << std::endl;
@@ -1152,8 +1155,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    // auto res = rhs;
-    // matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
+    auto res = rhs;
+    matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
 
     // TPZFMatrix<REAL> sol(cmesh->NEquations(), 1, 0.);
     
@@ -1329,12 +1332,11 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     // for (int64_t i = 0; i < res.Rows(); i++)
     //     vecnorm += a(i,0)*a(i,0);
     // vecnorm = sqrt(vecnorm);
-    // {
-    //     std::ofstream out("residual.txt");
-    //     res.Print("res", out, EMathematicaInput);
-    //     out << std::endl;
-    //     out << "VecNorm: " << vecnorm << std::endl;
-    // }
+    {
+        std::ofstream out("residual.txt");
+        res.Print("res", out, EMathematicaInput);
+        out << std::endl;
+    }
     return;
 }
 
