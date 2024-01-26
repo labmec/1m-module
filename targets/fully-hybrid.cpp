@@ -497,29 +497,14 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
         {
             TPZConnect &newnod = cmesh_u->ConnectVec()[i];
             if (newnod.LagrangeMultiplier() == 0)
-                newnod.SetLagrangeMultiplier(3);
+                newnod.SetLagrangeMultiplier(1);
         }
-        // for (auto& bc : simData->NormalBCs())
-        // {
-        //     if (bc.type == 0) //big number
-        //     {
-        //         int bc_mat = bc.matID;
-
-        //         for (auto& cel : cmesh_u->ElementVec())
-        //         {
-        //             int mat = cel->Reference()->MaterialId();
-        //             if (mat == bc_mat)
-        //             {
-        //                 ncon = cel->NConnects();
-        //                 for (int i = 0; i < ncon; i++)
-        //                 {
-        //                     TPZConnect& con = cel->Connect(i);
-        //                     con.SetLagrangeMultiplier(0);
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+        for (int64_t i = 0; i < ncon; i++)
+        {
+            TPZConnect &newnod = cmesh_u->ConnectVec()[i];
+            if (newnod.LagrangeMultiplier() == 2)
+                newnod.SetLagrangeMultiplier(0);
+        }
 
         gmesh->ResetReference();
     }
@@ -571,7 +556,7 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         for (int64_t i = 0; i < ncon; i++)
         {
             TPZConnect &newnod = cmesh_p->ConnectVec()[i];
-            newnod.SetLagrangeMultiplier(4);
+            newnod.SetLagrangeMultiplier(2);
         }
 
         // matlambda traction material
@@ -613,7 +598,7 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         {
             TPZConnect &newnod = cmesh_p->ConnectVec()[i];
             if (newnod.LagrangeMultiplier() == 0)
-                newnod.SetLagrangeMultiplier(1);
+                newnod.SetLagrangeMultiplier(3);
         }
     }
 
@@ -647,7 +632,7 @@ TPZCompMesh *CreateCMeshG(ProblemData *simData, TPZGeoMesh *gmesh)
     for (int64_t i = 0; i < ncon; i++)
     {
         TPZConnect &newnod = cmesh_g->ConnectVec()[i];
-        newnod.SetLagrangeMultiplier(5);
+        newnod.SetLagrangeMultiplier(4);
     }
 
     simData->MeshVector()[2] = cmesh_g;
@@ -676,7 +661,7 @@ TPZCompMesh *CreateCMeshPm(ProblemData *simData, TPZGeoMesh *gmesh)
     for (int64_t i = 0; i < ncon; i++)
     {
         TPZConnect &newnod = cmesh_pm->ConnectVec()[i];
-        newnod.SetLagrangeMultiplier(5);
+        newnod.SetLagrangeMultiplier(4);
     }
 
     simData->MeshVector()[3] = cmesh_pm;
@@ -916,7 +901,36 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
     for (int64_t iEnv = 0; iEnv < nenvel; iEnv++)
     {
         TPZElementGroup *elGroup = elGroups[iEnv];
-        new TPZCondensedCompElT<STATE>(elGroup);
+        TPZCondensedCompElT<STATE>* cel = new TPZCondensedCompElT<STATE>(elGroup);
+
+        //Reordering internal connects according to Lagrange Multiplier. One corner pressure must be placed after the distributed displacement 
+        TPZManVector<int64_t,55> connectIds;
+        cel->GetCondensedConnectIds(connectIds);
+        int ncon = cel->NCondensedConnects();
+        TPZManVector<int64_t,55> sortedConnectIds(ncon,0);
+        TPZManVector<int,55> lagList(ncon,0);
+        TPZManVector<int,55> perm(ncon,0);
+        
+        for (int ic = 0; ic < ncon; ic++) //creating a list with the lagrange multiplier of each connect
+        {
+            int64_t cId = connectIds[ic];
+            perm[ic] = cId;
+            TPZConnect c = cmesh_m->ConnectVec()[cId];
+            int lagLevel = c.LagrangeMultiplier();
+            lagList[ic] = lagLevel;
+        }
+
+        int lastConIndex = connectIds[ncon-1]; //Distributed Displacement
+        int secondPressureIndex = connectIds[2]; //Second Pressure
+        connectIds[ncon-1] = secondPressureIndex;
+        connectIds[2] = lastConIndex;
+        std::set<int64_t> setIds;
+        for (int ic = 0; ic < ncon; ic++) //creating a list with the lagrange multiplier of each connect
+        {
+            setIds.insert(connectIds[ic]);
+        }
+        int size = setIds.size();
+        //cel->SetCondensedConnectIds(connectIds);
     }
 
     cmesh_m->SetName("CMesh_M_Condensed");
