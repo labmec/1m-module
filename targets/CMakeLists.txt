@@ -31,3 +31,6 @@ target_link_libraries(SimpleShear PRIVATE libproject)
 
 add_executable(FullyHybrid fully-hybrid.cpp)
 target_link_libraries(FullyHybrid PRIVATE libproject)
+
+add_executable(1m-module-new-mesh-hdiv 1m-module-new-mesh-hdiv.cpp)
+target_link_libraries(1m-module-new-mesh-hdiv PRIVATE libproject)
