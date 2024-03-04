@@ -1,0 +1,57 @@
+{	
+	"MeshName": "UniformTensionTH1el.msh",
+
+	"CreateMsh": false,
+
+	"HdivType": 0,
+
+	"DisppOrder": 2, // approximation order for velocity
+
+	"LambdapOrder": 0, // approximation order for traction
+
+	"Dim": 2,
+
+	"Resolution": 0,
+
+    "StaticCondensation": false,
+
+	"Domain": [ // domain data
+		{
+			"name": "Elastic_Domain",
+			"matID": 1,
+			"E": 1,
+            "nu": 0.25
+		}
+	],
+
+	"NormalBoundary":[
+		{
+			"name": "ZeroDispX ", // name of boundary condition
+			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 2
+		},
+        {
+			"name": "ZeroDispY", // name of boundary condition
+			"type": 4, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 0.0,
+			"matID": 3
+		},
+        {
+			"name": "UnitTraction", // name of boundary condition
+			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"value": 1.0,
+			"matID": 4
+		}
+	],
+
+	"TangentialBoundary": [
+        
+	]
+}
+
+
+
+
+
+
