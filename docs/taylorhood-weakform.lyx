@@ -83,15 +83,11 @@
 \begin_body
 
 \begin_layout Section
-Strong Form
+Strong Form of Elasticity using Taylor-Hood elements
 \end_layout
 
 \begin_layout Standard
-In the case of incompressible material, i.e., 
-\begin_inset Formula $\nu=0.5$
-\end_inset
-
-, the strong form is posed as:
+The strong form is posed as:
 \end_layout
 
 \begin_layout Standard
@@ -119,42 +115,31 @@ where
 \begin_inset Formula $\kappa$
 \end_inset
 
- is the material bulk modulus, 
+ is the material bulk modulus and 
 \begin_inset Formula $\sigma$
 \end_inset
 
- is the Cauchy stress tensor defined as:
+ is the Cauchy stress tensor, which can be decomposed in its deviatoric
+ and hydrostatic counterparts as:
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \[
-\sigma=2\mu\epsilon-p\mathbf{I},
+\sigma=\sigma'-p\mathbf{I},
 \]
 
 \end_inset
 
 where 
-\begin_inset Formula $\lambda$
-\end_inset
-
- and 
-\begin_inset Formula $\mu$
-\end_inset
-
-are the Lame parameters, 
-\begin_inset Formula $\mathbf{I}$
-\end_inset
-
- is the indentity matrix, the pressure 
 \begin_inset Formula $p$
 \end_inset
 
- is defined as 
-\begin_inset Formula $p=\frac{1}{3}Tr(\sigma)$
+ is the hydrostatic pressure, 
+\begin_inset Formula $\mathbf{I}$
 \end_inset
 
- and 
+ is the indentity matrix, 
 \begin_inset Formula $\epsilon$
 \end_inset
 
@@ -166,6 +151,49 @@ are the Lame parameters,
 \[
 \epsilon(\mathbf{u})=\frac{\nabla\mathbf{u}+\nabla\mathbf{u}^{T}}{2}
 \]
+
+\end_inset
+
+
+\begin_inset Formula $\sigma'$
+\end_inset
+
+ is the deviatoric stress tensor that depends on the constitutive model
+ adopted.
+ Let's consider three different cases: for 3D elasticity, 2D elasticity
+ and Stokes flows.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\begin{cases}
+\begin{array}{ccccc}
+\sigma' & = & 2\mu\epsilon-\frac{2}{3}(\mu+\lambda)\mathnormal{tr}\epsilon\mathbf{I} &  & \text{for 3D elasticity}\\
+\sigma' & = & 2\mu\epsilon-\mu\mathnormal{tr}\epsilon\mathbf{I} &  & \text{for 2D elasticity}\\
+\sigma' & = & 2\mu\epsilon &  & \text{for 2D/3D stokes}
+\end{array}\end{cases}
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $\mu$
+\end_inset
+
+ and 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ standing for Lamé parameters, computed as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\mu & =\frac{E}{2(1+\nu)}\\
+\lambda & =\frac{E\nu}{(1+\nu)(1-2\nu)}
+\end{align*}
 
 \end_inset
 
@@ -199,8 +227,8 @@ where
 \end_layout
 
 \begin_layout Standard
-It is noted the material bulk modulus might be different for differente
- dimensions as defined next:
+It is noted that the material bulk modulus might be different for different
+ cases as defined next:
 \end_layout
 
 \begin_layout Standard
@@ -208,15 +236,33 @@ It is noted the material bulk modulus might be different for differente
 \begin{equation}
 \begin{cases}
 \begin{array}{ccccc}
-\kappa & = & \lambda+\frac{2}{3}\mu &  & \text{for 3D}\\
+\kappa & = & \lambda+\frac{2}{3}\mu &  & \text{for 3D elasticity}\\
 \kappa & = & \lambda+\mu &  & \text{for plane strain}\\
-\kappa & = & \mu\frac{(2\mu+3\lambda)}{\lambda+2\mu} &  & \text{for plane stress}
+\kappa & = & \mu\frac{(2\mu+3\lambda)}{\lambda+2\mu} &  & \text{for plane stress}\\
+\kappa & = & \infty &  & \text{for 2D/3D stokes}
 \end{array}\end{cases}
 \end{equation}
 
 \end_inset
 
 
+\end_layout
+
+\begin_layout Standard
+One observes that when 
+\begin_inset Formula $\nu\rightarrow0.5$
+\end_inset
+
+, 
+\begin_inset Formula $\lambda\rightarrow\infty$
+\end_inset
+
+, so 
+\begin_inset Formula $\kappa\rightarrow\infty$
+\end_inset
+
+ for all the aforementioned cases, and a full incompressible formulation
+ is recovered.
 \end_layout
 
 \begin_layout Section
