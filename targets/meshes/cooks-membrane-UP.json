@@ -5,13 +5,13 @@
 
 	"HdivType": 0,
 
-	"DisppOrder": 5, // approximation order for displacement
+	"DisppOrder": 1, // approximation order for displacement
 
-    "LambdapOrder": 4,
+    "LambdapOrder": 0,
 
 	"Dim": 2,
 
-	"Resolution": 0,
+	"Resolution": 3,
 
 	"StaticCondensation": true,
 
@@ -50,7 +50,7 @@
             "name": "ShearStress",
             "matID": 5,
             "type": 3,
-            "value": [0.0,-6.25,0.0]
+            "value": [0.0,6.25,0.0]
         }
 	]
 }
