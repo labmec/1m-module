@@ -190,6 +190,8 @@ int main(int argc, char *argv[])
     }
     // Analysis
     // Solve Multiphysics
+    std::cout << "Number of system equations: " << cmesh_m->NEquations() << std::endl;
+    std::cout << "Number of full equations: " << cmesh_m->Solution().Rows() << std::endl;
     TPZLinearAnalysis an(cmesh_m, RenumType::EMetis);
     SolveProblemDirect(an, cmesh_m, &problemdata);
 
