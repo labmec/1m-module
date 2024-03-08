@@ -1,0 +1,62 @@
+{	
+	"MeshName": "cooks-membrane-quad-16.msh",
+
+	"CreateMsh": false,
+
+	"HdivType": 0,
+
+	"DisppOrder": 4, // approximation order for displacement
+
+    "LambdapOrder": 3,
+
+	"Dim": 2,
+
+	"Resolution": 0,
+
+	"StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Domain",
+			"matID": 1,
+			"E": 240.565,
+			"nu": 0.4999
+		}
+	],
+
+	"NormalBoundary":[
+        {
+            "name": "ZeroNormalStress",
+            "matID": 2,
+            "type": 2,
+            "value": 0.0
+        },
+        {
+            "name": "ZeroNormalDisp",
+            "matID": 3,
+            "type": 0,
+            "value": 0.0
+        }
+	],
+
+	"TangentialBoundary": [
+        {
+            "name": "ZeroTangentialDisp",
+            "matID": 4,
+            "type": 1,
+            "value": [0.0,0.0,0.0]
+        },
+        {
+            "name": "ShearStress",
+            "matID": 5,
+            "type": 3,
+            "value": [0.0,6.25,0.0]
+        }
+	]
+}
+
+
+
+
+
+

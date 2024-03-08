@@ -43,12 +43,14 @@ Physical Curve("ShearStress", 5) = {2};
 //+
 //Transfinite Curve {4} = Round(scale*a)+1 Using Progression 1;
 
-Transfinite Curve {1} = 1 Using Progression 1;
+Transfinite Curve {1} = 33 Using Progression 1;
 //+
-Transfinite Curve {2} = 1 Using Progression 1;
+Transfinite Curve {2} = 33 Using Progression 1;
 //+
-Transfinite Curve {3} = 1 Using Progression 1;
+Transfinite Curve {3} = 33 Using Progression 1;
 //+
-Transfinite Curve {4} = 1 Using Progression 1;
+Transfinite Curve {4} = 33 Using Progression 1;
 //+
 Transfinite Surface {1};
+//+
+//Recombine Surface {1};

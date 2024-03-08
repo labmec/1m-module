@@ -94,7 +94,10 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "cooks-membrane-UP.json";    
+    std::string jsonfilename = "cooks-membrane-quad-";
+    int meshref = 32;
+    if(argc > 1) meshref = atoi(argv[1]);
+    jsonfilename += to_string(meshref) + ".json";
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
     problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);
@@ -192,6 +195,10 @@ int main(int argc, char *argv[])
     // Solve Multiphysics
     std::cout << "Number of system equations: " << cmesh_m->NEquations() << std::endl;
     std::cout << "Number of full equations: " << cmesh_m->Solution().Rows() << std::endl;
+    int64_t nel = 0;
+    for (auto* el : gmesh->ElementVec())
+        if (el->Dimension() == gmesh->Dimension()) nel++;
+    std::cout << "Number of elements: " << nel << std::endl;
     TPZLinearAnalysis an(cmesh_m, RenumType::EMetis);
     SolveProblemDirect(an, cmesh_m, &problemdata);
 
