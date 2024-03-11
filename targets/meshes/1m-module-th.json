@@ -1,0 +1,67 @@
+{	
+	"MeshName": "updated-module.msh",
+
+    "HdivType": 0,
+
+	"DisppOrder": 2, // approximation order for displacement
+
+    "LambdapOrder": 1,
+
+	"Dim": 3,
+
+	"Resolution": 2,
+
+	"StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Domain",
+			"matID": 1,
+			"E": 210000.0,
+			"nu": 0.3
+		}
+	],
+
+	"NormalBoundary":[
+        {
+            "name": "InternalPressure",
+            "matID": 2,
+            "type": 2,
+            "value": -10.34
+        },
+        {
+            "name": "SymmetryX",
+            "matID": 3,
+            "type": 0,
+            "value": 0.0
+        },
+        {
+            "name": "SymmetryY",
+            "matID": 4,
+            "type": 0,
+            "value": 0.0
+        },
+        {
+            "name": "Top",
+            "matID": 5,
+            "type": 0,
+            "value": 0.0
+        },
+        {
+            "name": "Bottom",
+            "matID": 6,
+            "type": 0,
+            "value": 0.0
+        }
+	],
+
+	"TangentialBoundary": [
+        
+	]
+}
+
+
+
+
+
+

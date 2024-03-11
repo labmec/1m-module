@@ -38,3 +38,6 @@ target_link_libraries(1m-module-new-mesh-hdiv PRIVATE libproject)
 add_executable(taylor-hood-test taylor-hood-test.cpp)
 target_link_libraries(taylor-hood-test PRIVATE libproject)
 
+add_executable(taylor-hood-module taylor-hood-module.cpp)
+target_link_libraries(taylor-hood-module PRIVATE libproject)
+
