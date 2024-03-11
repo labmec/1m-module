@@ -364,12 +364,12 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
         {
             val2 = bc.value;
 
-            TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
             if(bc.type == 6) {
                 val2.Fill(0.);
                 val1.Identity();
                 val1 *= bc.value[0];
             }
+            TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
             auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
             if (mat->HasExactSol())
                 matBC2->SetForcingFunctionBC(mat->ExactSol(),4);
