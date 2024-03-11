@@ -420,7 +420,7 @@ Note also that the space of
 \end_inset
 
  since 
-\begin_inset Formula $H^{1}(\Omega)\in L^{2}(\Omega)$
+\begin_inset Formula $H^{1}(\Omega)\subset L^{2}(\Omega)$
 \end_inset
 
 .
