@@ -37,7 +37,7 @@
 #include "TPZMatrixSolver.h"
 #include "Elasticity/TPZElasticityTH.h"
 
-const int global_nthread = 0;
+const int global_nthread = 32;
 
 enum HdivType
 {
@@ -55,13 +55,6 @@ enum EMatid
     EZeroTangentialStress,
     EPressure,
     EStiffner
-};
-
-enum EBCtype {
-    ESymmetryX,
-    ESymmetryY,
-    ENoDispZ,
-    EInternalPressure
 };
 
 // functions declaration
@@ -95,7 +88,7 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "1m-module-hdiv.json";
+    std::string jsonfilename = "1m-module-th.json";
     if (argc > 1)
         jsonfilename = std::string(argv[1]);
     ProblemData problemdata;
@@ -141,7 +134,9 @@ int main(int argc, char *argv[])
     if (global_nthread == 0)
         renum = RenumType::ENone;
     
+    TPZSimpleTimer time_band;        
     TPZLinearAnalysis an(cmesh_m, renum);
+    std::cout << "Total time optimize band = " << time_band.ReturnTimeDouble() / 1000. << " s" << std::endl;
     SolveProblemDirect(an, cmesh_m);
     {
         std::ofstream out("cmesh.vtk");
@@ -370,7 +365,7 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
             val2 = bc.value;
 
             TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
-            if(bc.type == EBCtype::EInternalPressure) {
+            if(bc.type == 6) {
                 val2.Fill(0.);
                 val1.Identity();
                 val1 *= bc.value[0];
@@ -637,8 +632,8 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh)
 {
     // TPZSkylineStructMatrix<STATE> matskl(cmesh);
-    // TPZSSpStructMatrix<STATE> matskl(cmesh);
-    TPZFStructMatrix<STATE> matskl(cmesh);
+    TPZSSpStructMatrix<STATE> matskl(cmesh);
+    // TPZFStructMatrix<STATE> matskl(cmesh);
     matskl.SetNumThreads(global_nthread);
     an.SetStructuralMatrix(matskl);
 

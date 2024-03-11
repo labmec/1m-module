@@ -9,7 +9,7 @@
 
 	"Dim": 3,
 
-	"Resolution": 2,
+	"Resolution": 0,
 
 	"StaticCondensation": true,
 
@@ -26,31 +26,31 @@
         {
             "name": "InternalPressure",
             "matID": 2,
-            "type": 2,
+            "type": 6,
             "value": -10.34
         },
         {
             "name": "SymmetryX",
             "matID": 3,
-            "type": 0,
+            "type": 3,
             "value": 0.0
         },
         {
             "name": "SymmetryY",
             "matID": 4,
-            "type": 0,
+            "type": 4,
             "value": 0.0
         },
         {
             "name": "Top",
             "matID": 5,
-            "type": 0,
+            "type": 5,
             "value": 0.0
         },
         {
             "name": "Bottom",
             "matID": 6,
-            "type": 0,
+            "type": 5,
             "value": 0.0
         }
 	],
