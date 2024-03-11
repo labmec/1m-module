@@ -1,7 +1,7 @@
 {	
-	"MeshName": "UniformTensionTH.msh",
+	"MeshName": "UniformShearTH.msh",
 
-	"CreateMsh": false,
+    "CreateMsh": false,
 
 	"HdivType": 0,
 
@@ -11,7 +11,7 @@
 
 	"Dim": 2,
 
-	"Resolution": 1,
+	"Resolution": 0,
 
     "StaticCondensation": false,
 
@@ -20,12 +20,12 @@
 			"name": "Elastic_Domain",
 			"matID": 1,
 			"E": 1,
-            "nu": 0.0
+            "nu": 0.5
 		}
 	],
 
 	"NormalBoundary":[
-		{
+        {
 			"name": "ZeroDispX ", // name of boundary condition
 			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
 			"value": 0.0,
@@ -39,14 +39,13 @@
 		},
         {
 			"name": "UnitTraction", // name of boundary condition
-			"type": 1, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
+			"type": 3, // type: 0 -> Normal Velocity, 1 -> Tangential Velocity, 2 -> Normal Stress, and 3 -> Tangential Stress 
 			"value": 1.0,
 			"matID": 4
 		}
 	],
 
 	"TangentialBoundary": [
-        
 	]
 }
 

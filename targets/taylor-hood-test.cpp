@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "UniformTensionTH.json";
+    std::string jsonfilename = "UniformShearTH.json";
     if (argc > 1)
         jsonfilename = std::string(argv[1]);
     ProblemData problemdata;
