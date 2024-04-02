@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 #endif
     
     std::cout << "--------- Starting simulation ---------" << std::endl;
-    const bool isUseDirectionalRef = false;
+    const bool isUseDirectionalRef = true;
     const bool isUseCylMap = false;
     const int nUniformRef = 0;
     if(isUseDirectionalRef){
@@ -92,11 +92,28 @@ int main(int argc, char *argv[]) {
     }
        
     // Refine mesh directionally towards the singularity at the stiffner
+    int destMatID = 1;
     if(isUseDirectionalRef){
         std::set<int> matidstoref = {EStiffner};
-        TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
-        TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
-        TPZRefPatternTools::RefineDirectional(gmesh, matidstoref);
+        {
+            std::ofstream out("gmesh0.vtk");
+            TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+        }
+        TPZRefPatternTools::RefineDirectional(gmesh, matidstoref, destMatID);
+        {
+            std::ofstream out("gmesh1.vtk");
+            TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+        }
+        TPZRefPatternTools::RefineDirectional(gmesh, matidstoref, destMatID+1);
+        {
+            std::ofstream out("gmesh2.vtk");
+            TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+        }
+        TPZRefPatternTools::RefineDirectional(gmesh, matidstoref, destMatID+2);
+        {
+            std::ofstream out("gmesh3.vtk");
+            TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+        }
     }
     
 
@@ -125,12 +142,12 @@ int main(int argc, char *argv[]) {
         geom.UniformRefine(nUniformRef);
     }
     
-    std::ofstream out("gmesh.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
-    {
-        std::ofstream out("gmesh.txt");
-        gmesh->Print(out);
-    }
+    // std::ofstream out("gmesh.vtk");
+    // TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
+    // {
+    //     std::ofstream out("gmesh.txt");
+    //     gmesh->Print(out);
+    // }
     
     // Create compmeshes
     if(problemdata.DomainVec().size() > 1) DebugStop(); // Please implement the next lines correctly if many domains
@@ -217,7 +234,7 @@ TPZGeoMesh* ReadMeshFromGmsh(std::string file_name)
         // o matid que voce mesmo escolher
         TPZManVector<std::map<std::string,int>,4> stringtoint(4);
         stringtoint[3]["dom"] = EDomain;
-//        stringtoint[1]["stif"] = EStiffner;
+        stringtoint[1]["stif"] = EStiffner;
         
         reader.SetDimNamePhysical(stringtoint);
         reader.GeometricGmshMesh(file_name,gmesh,false);
