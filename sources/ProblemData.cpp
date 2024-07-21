@@ -85,6 +85,7 @@ void ProblemData::ReadJson(std::string file){
         bcNormaldata.type = bcjson["type"];
         bcNormaldata.matID = bcjson["matID"];
         bcNormaldata.value[0] = bcjson["value"];
+        if(bcjson.find("domainID") != bcjson.end()) bcNormaldata.domainID = bcjson["domainID"];
         
         fBcNormalVec.push_back(bcNormaldata);
     }

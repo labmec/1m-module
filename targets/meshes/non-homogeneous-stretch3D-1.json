@@ -1,0 +1,93 @@
+{	
+	"MeshName": "non-homogeneous-stretch-1.msh",
+
+	"CreateMsh": false,
+
+	"HdivType": 0,
+
+	"DisppOrder": 1, // approximation order for displacement
+
+    "LambdapOrder": 0,
+
+	"Dim": 2,
+
+	"Resolution": 0,
+
+	"StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Domain1",
+			"matID": 1,
+			"E": 1,
+			"nu": 0
+		},
+        {
+			"name": "Domain2",
+			"matID": 2,
+			"E": 2,
+			"nu": 0
+		}
+	],
+
+	"NormalBoundary":[
+        {
+            "name": "ZeroNormalDisp1",
+            "matID": 3,
+            "type": 0,
+            "value": 0.0,
+            "domainID": 1
+        },
+        {
+            "name": "ZeroNormalDisp2",
+            "matID": 4,
+            "type": 0,
+            "value": 0.0,
+            "domainID": 2
+        },
+        {
+            "name": "UnitNormalDisp1",
+            "matID": 5,
+            "type": 0,
+            "value": 1.0,
+            "domainID": 1
+        },
+        {
+            "name": "UnitNormalDisp2",
+            "matID": 6,
+            "type": 0,
+            "value": 1.0,
+            "domainID": 2
+        },
+        {
+            "name": "ZeroNormalStress2",
+            "matID": 7,
+            "type": 2,
+            "value": 0.0,
+            "domainID": 2
+        }
+	],
+
+	"TangentialBoundary": [
+        {
+            "name": "ZeroTangentialStress1",
+            "matID": 8,
+            "type": 3,
+            "value": [0.0,0.0,0.0],
+            "domainID": 1
+        },
+        {
+            "name": "ZeroTangentialStress2",
+            "matID": 9,
+            "type": 3,
+            "value": [0.0,0.0,0.0],
+            "domainID": 2
+        }
+	]
+}
+
+
+
+
+
+

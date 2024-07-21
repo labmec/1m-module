@@ -43,7 +43,7 @@
 #include "TPZSYSMPPardiso.h"
 #include "TPZSparseMatRed.h"
 
-const int global_nthread = 0;
+const int global_nthread = 64;
 const int global_pord_bc = 10;
 
 using namespace std;
@@ -94,12 +94,10 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "conv-bishop-";
+    std::string jsonfilename = "non-homogeneous-stretch-";
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
-    jsonfilename += to_string(meshref) + "-hex.json";
-    // jsonfilename = "bishop-beam-UP.json";
-    
+    jsonfilename += to_string(meshref) + ".json";
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
     problemdata.ReadJson(std::string(MESHES_DIR) + "/" + jsonfilename);
@@ -119,22 +117,29 @@ int main(int argc, char *argv[])
     }
 
     const REAL young = problemdata.DomainVec()[0].E;
-    const REAL poisson = argc > 2? atof(argv[2]) : problemdata.DomainVec()[0].nu;
+    const REAL poisson = problemdata.DomainVec()[0].nu;
 
-    // TElasticity2DAnalytic *elas = new TElasticity2DAnalytic;
-    // elas->gE = young;
-    // elas->gPoisson = poisson;
-    // elas->fPlaneStress = 0;
-    // elas->fProblemType = TElasticity2DAnalytic::EShear;
+    TPZAnalyticSolution* analytic_sol = nullptr;
+    if (problemdata.Dim() == 2)
+    {
+        TElasticity2DAnalytic *elas = new TElasticity2DAnalytic;
+        elas->gE = young;
+        elas->gPoisson = poisson;
+        elas->fPlaneStress = 0;
+        elas->fProblemType = TElasticity2DAnalytic::ENone;
+        analytic_sol = elas;
+    }
+    else
+    {
+        TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
+        elas->fE = young;
+        elas->fPoisson = poisson;
+        elas->fProblemType = TElasticity3DAnalytic::ENone;
+        analytic_sol = elas;
+    }
 
-    TElasticity3DAnalytic *elas = new TElasticity3DAnalytic;
-    elas->fE = young;
-    elas->fPoisson = poisson;
-    elas->fProblemType = TElasticity3DAnalytic::ETestShearMoment;
 
     // Create compmeshes
-    if (problemdata.DomainVec().size() > 1)
-        DebugStop(); // Please implement the next lines correctly if many domains
 
     TPZCompMesh *cmesh_u = CreateCMeshU(&problemdata, gmesh);
     {
@@ -160,7 +165,7 @@ int main(int argc, char *argv[])
         problemdata.MeshVector().resize(2);
     }
     
-    TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh, elas);
+    TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh, analytic_sol);
     {
         std::ofstream out("gmesh.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
@@ -186,23 +191,36 @@ int main(int argc, char *argv[])
     }
     // Analysis
     // Solve Multiphysics
+    std::cout << "Number of system equations: " << cmesh_m->NEquations() << std::endl;
+    std::cout << "Number of full equations: " << cmesh_m->Solution().Rows() << std::endl;
+    int64_t nel = 0;
+    for (auto* el : gmesh->ElementVec())
+        if (el->Dimension() == gmesh->Dimension()) nel++;
+    std::cout << "Number of elements: " << nel << std::endl;
     TPZLinearAnalysis an(cmesh_m, RenumType::EMetis);
     SolveProblemDirect(an, cmesh_m, &problemdata);
-    // SolveProblemSparseMatRed(an, cmesh_m, &problemdata);
 
     // Post Process
     std::cout << "--------- PostProcess ---------" << std::endl;
     PrintResults(an, cmesh_m, &problemdata);
     
     // Calculating error
-    if (elas->fProblemType != 0)
+    bool computeError = false;
+    if (dynamic_cast<TElasticity2DAnalytic*>(analytic_sol))
     {
-        an.SetExact(elas->ExactSolution());
+        computeError = dynamic_cast<TElasticity2DAnalytic*>(analytic_sol)->fProblemType != 0 ? true : false;
+    }
+    else if (dynamic_cast<TElasticity3DAnalytic*>(analytic_sol))
+    {
+        computeError = dynamic_cast<TElasticity3DAnalytic*>(analytic_sol)->fProblemType != 0 ? true : false;
+    }
+    if (computeError)
+    {
+        an.SetExact(analytic_sol->ExactSolution());
         an.SetThreadsForError(global_nthread);
-        std::ofstream out("bishop-convergence.txt",std::ios::app);
+        std::ofstream out("cooks-membrane-convergence.txt",std::ios::app);
         out << "\n----------------- Starting new simulation -----------------" << std::endl;
         std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
-        out << "meshref: " << meshref << ", poisson: " << poisson << std::endl;
         
         TPZMaterial *mat = cmesh_m->FindMaterial(problemdata.DomainVec()[0].matID);
         TPZMatErrorCombinedSpaces<STATE> *materr = dynamic_cast<TPZMatErrorCombinedSpaces<STATE>*>(mat);
@@ -421,22 +439,27 @@ TPZCompMesh *CreateCMeshU(ProblemData *simData, TPZGeoMesh *gmesh)
 
         cmesh_u->SetAllCreateFunctionsHDiv();
 
-        auto *mat_normal = new TPZNullMaterial<>(simData->DomainVec()[0].matID);
-        cmesh_u->InsertMaterialObject(mat_normal);
-
-        materialIDs.insert(simData->DomainVec()[0].matID);
-
-        // boundary conditions' material
-        TPZFMatrix<STATE> val1(1, 1, 0.);
-        TPZManVector<STATE> val2(1, 0.);
-
-        for (const auto &bc : simData->NormalBCs())
+        for (const auto &domain : simData->DomainVec())
         {
-            val2 = bc.value;
+            auto *mat_normal = new TPZNullMaterial<>(domain.matID);
+            cmesh_u->InsertMaterialObject(mat_normal);
+            materialIDs.insert(domain.matID);
 
-            auto BCmat = mat_normal->CreateBC(mat_normal, bc.matID, bc.type, val1, val2);
-            cmesh_u->InsertMaterialObject(BCmat);
-            materialIDs.insert(bc.matID);
+            // boundary conditions' material
+            TPZFMatrix<STATE> val1(1, 1, 0.);
+            TPZManVector<STATE> val2(1, 0.);
+
+            for (const auto &bc : simData->NormalBCs())
+            {
+                int domainID = bc.domainID;
+                if (domainID != domain.matID)
+                    continue;
+                val2 = bc.value;
+
+                auto BCmat = mat_normal->CreateBC(mat_normal, bc.matID, bc.type, val1, val2);
+                cmesh_u->InsertMaterialObject(BCmat);
+                materialIDs.insert(bc.matID);
+            }
         }
 
         cmesh_u->AutoBuild(materialIDs);
@@ -542,10 +565,13 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_p->ApproxSpace().CreateDisconnectedElements(true);
 
         // domain's material
-        auto *mat = new TPZNullMaterial<>(simData->DomainVec()[0].matID);
-        cmesh_p->InsertMaterialObject(mat);
+        for (const auto &domain : simData->DomainVec())
+        {
+            auto *mat = new TPZNullMaterial<>(domain.matID);
+            cmesh_p->InsertMaterialObject(mat);
 
-        materialIDs.insert(simData->DomainVec()[0].matID);
+            materialIDs.insert(domain.matID);
+        }
 
         cmesh_p->AutoBuild(materialIDs);
         gmesh->ResetReference();
@@ -565,16 +591,6 @@ TPZCompMesh *CreateCMeshP(ProblemData *simData, TPZGeoMesh *gmesh)
         cmesh_p->InsertMaterialObject(matLambda);
 
         materialIDs.insert(simData->LambdaID());
-
-        // // traction on boundary material
-        // for (const auto &bc : simData->TangentialBCs())
-        // {
-        //     auto matLambdaBC = new TPZNullMaterial<>(bc.matID);
-        //     matLambdaBC->SetNStateVariables(simData->Dim() - 1);
-        //     cmesh_p->InsertMaterialObject(matLambdaBC);
-
-        //     materialIDs.insert(bc.matID);
-        // }
 
         if (simData->LambdapOrder() > 0)
         {
@@ -619,8 +635,11 @@ TPZCompMesh *CreateCMeshG(ProblemData *simData, TPZGeoMesh *gmesh)
 
     cmesh_g->SetAllCreateFunctionsDiscontinuous();
 
-    auto mat = new TPZNullMaterial<>(simData->DomainVec()[0].matID);
-    cmesh_g->InsertMaterialObject(mat);
+    for (const auto &domain : simData->DomainVec())
+    {
+        auto mat = new TPZNullMaterial<>(domain.matID);
+        cmesh_g->InsertMaterialObject(mat);
+    }
 
     int64_t ncel = cmesh_g->NElements();
 
@@ -650,8 +669,11 @@ TPZCompMesh *CreateCMeshPm(ProblemData *simData, TPZGeoMesh *gmesh)
 
     cmesh_pm->SetAllCreateFunctionsDiscontinuous();
 
-    auto mat = new TPZNullMaterial<>(simData->DomainVec()[0].matID);
-    cmesh_pm->InsertMaterialObject(mat);
+    for (const auto &domain : simData->DomainVec())
+    {
+        auto mat = new TPZNullMaterial<>(domain.matID);
+        cmesh_pm->InsertMaterialObject(mat);
+    }
 
     cmesh_pm->AutoBuild();
     cmesh_pm->AdjustBoundaryElements();
@@ -684,56 +706,65 @@ TPZMultiphysicsCompMesh *CreateMultiphysicsMesh(ProblemData *simData, TPZGeoMesh
     // 1. For domain
     if (simData->DomainVec().size() != 0)
     {
-        REAL young = simData->DomainVec()[0].E;
-        REAL poisson = simData->DomainVec()[0].nu;
-        AnalysisType type = AnalysisType::EGeneral;
-        if (dynamic_cast<TElasticity2DAnalytic*>(sol))
+        for (const auto &domain : simData->DomainVec())
         {
-            TElasticity2DAnalytic* elas = dynamic_cast<TElasticity2DAnalytic*>(sol);
-            young = elas->gE;
-            poisson = elas->gPoisson;
-            type = (elas->fPlaneStress)? AnalysisType::EPlaneStress : AnalysisType::EPlaneStrain;
-            if (elas->fProblemType == TElasticity2DAnalytic::ENone) sol = nullptr;
+            REAL young = domain.E;
+            REAL poisson = domain.nu;
+            AnalysisType type = AnalysisType::EGeneral;
+            if (dynamic_cast<TElasticity2DAnalytic*>(sol))
+            {
+                TElasticity2DAnalytic* elas = dynamic_cast<TElasticity2DAnalytic*>(sol);
+                young = elas->gE;
+                poisson = elas->gPoisson;
+                type = (elas->fPlaneStress)? AnalysisType::EPlaneStress : AnalysisType::EPlaneStrain;
+                if (elas->fProblemType == TElasticity2DAnalytic::ENone) sol = nullptr;
+            }
+            else if (dynamic_cast<TElasticity3DAnalytic*>(sol))
+            {
+                TElasticity3DAnalytic* elas = dynamic_cast<TElasticity3DAnalytic*>(sol);
+                young = elas->fE;
+                poisson = elas->fPoisson;
+                type = AnalysisType::EGeneral;
+                if (elas->fProblemType == TElasticity3DAnalytic::ENone) sol = nullptr;
+            }
+            TPZHybridMixedElasticityUP *mat = new TPZHybridMixedElasticityUP(domain.matID, simData->Dim(), young, poisson, type);
+            if (sol) mat->SetExactSol(sol->ExactSolution(), 4);
+            cmesh_m->InsertMaterialObject(mat);
+            materialIDs.insert(domain.matID);
+
+            // 2. Boundary Conditions
+            TPZFMatrix<STATE> val1(3, 3, 0.);
+            TPZManVector<STATE> val2(3, 0.);
+
+            for (const auto &bc : simData->NormalBCs())
+            {
+                int domainId = bc.domainID;
+                if (domainId != domain.matID)
+                    continue;
+                val2 = bc.value;
+                TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
+                auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
+                if (sol) matBC2->SetForcingFunctionBC(sol->ExactSolution(), global_pord_bc);
+                cmesh_m->InsertMaterialObject(matBC);
+                materialIDs.insert(bc.matID);
+            }
+            
+            for (const auto &bc : simData->TangentialBCs())
+            {
+                int domainId = bc.domainID;
+                if (domainId != domain.matID)
+                    continue;
+                val2 = bc.value;
+                TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
+                auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
+                if (sol) matBC2->SetForcingFunctionBC(sol->ExactSolution(), global_pord_bc);
+                cmesh_m->InsertMaterialObject(matBC);
+                materialIDs.insert(bc.matID);
+            }
         }
-        else if (dynamic_cast<TElasticity3DAnalytic*>(sol))
-        {
-            TElasticity3DAnalytic* elas = dynamic_cast<TElasticity3DAnalytic*>(sol);
-            young = elas->fE;
-            poisson = elas->fPoisson;
-            type = AnalysisType::EGeneral;
-            if (elas->fProblemType == TElasticity3DAnalytic::ENone) sol = nullptr;
-        }
 
-        TPZHybridMixedElasticityUP *mat = new TPZHybridMixedElasticityUP(simData->DomainVec()[0].matID, simData->Dim(), young, poisson, type);
-        if (sol) mat->SetExactSol(sol->ExactSolution(), 4);
-        cmesh_m->InsertMaterialObject(mat);
-        materialIDs.insert(simData->DomainVec()[0].matID);
+       
 
-        // 2. Boundary Conditions
-        TPZFMatrix<STATE> val1(3, 3, 0.);
-        TPZManVector<STATE> val2(3, 0.);
-
-        for (const auto &bc : simData->NormalBCs())
-        {
-            val2 = bc.value;
-
-            TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
-            auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
-            if (sol) matBC2->SetForcingFunctionBC(sol->ExactSolution(), global_pord_bc);
-            cmesh_m->InsertMaterialObject(matBC);
-            materialIDs.insert(bc.matID);
-        }
-        
-        for (const auto &bc : simData->TangentialBCs())
-        {
-            val2 = bc.value;
-
-            TPZBndCond *matBC = mat->CreateBC(mat, bc.matID, bc.type, val1, val2);
-            auto matBC2 = dynamic_cast<TPZBndCondT<STATE> *>(matBC);
-            if (sol) matBC2->SetForcingFunctionBC(sol->ExactSolution(), global_pord_bc);
-            cmesh_m->InsertMaterialObject(matBC);
-            materialIDs.insert(bc.matID);
-        }
 
         // 3 - Material for tangential displacement
         TPZNullMaterialCS<> *mat_tan = new TPZNullMaterialCS<>(15);
@@ -902,35 +933,6 @@ void CondenseElements(ProblemData *simData, TPZMultiphysicsCompMesh *cmesh_m, TP
     {
         TPZElementGroup *elGroup = elGroups[iEnv];
         TPZCondensedCompElT<STATE>* cel = new TPZCondensedCompElT<STATE>(elGroup);
-
-        // //Reordering internal connects according to Lagrange Multiplier. One corner pressure must be placed after the distributed displacement 
-        // TPZManVector<int64_t,55> connectIds;
-        // cel->GetCondensedConnectIds(connectIds);
-        // int ncon = cel->NCondensedConnects();
-        // TPZManVector<int64_t,55> sortedConnectIds(ncon,0);
-        // TPZManVector<int,55> lagList(ncon,0);
-        // TPZManVector<int,55> perm(ncon,0);
-        
-        // for (int ic = 0; ic < ncon; ic++) //creating a list with the lagrange multiplier of each connect
-        // {
-        //     int64_t cId = connectIds[ic];
-        //     perm[ic] = cId;
-        //     TPZConnect c = cmesh_m->ConnectVec()[cId];
-        //     int lagLevel = c.LagrangeMultiplier();
-        //     lagList[ic] = lagLevel;
-        // }
-
-        // int lastConIndex = connectIds[ncon-1]; //Distributed Displacement
-        // int secondPressureIndex = connectIds[2]; //Second Pressure
-        // connectIds[ncon-1] = secondPressureIndex;
-        // connectIds[2] = lastConIndex;
-        // std::set<int64_t> setIds;
-        // for (int ic = 0; ic < ncon; ic++) //creating a list with the lagrange multiplier of each connect
-        // {
-        //     setIds.insert(connectIds[ic]);
-        // }
-        // int size = setIds.size();
-        //cel->SetCondensedConnectIds(connectIds);
     }
 
     cmesh_m->SetName("CMesh_M_Condensed");
@@ -1098,9 +1100,7 @@ void InsertInterfaces(TPZMultiphysicsCompMesh *cmesh_m, ProblemData *simData, TP
 
 void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *problem_data)
 {
-    // TPZSkylineStructMatrix<STATE> matskl(cmesh);
     TPZSSpStructMatrix<STATE> matskl(cmesh);
-    // TPZFStructMatrix<STATE> matskl(cmesh);
     matskl.SetNumThreads(global_nthread);
     an.SetStructuralMatrix(matskl);
 
@@ -1115,227 +1115,12 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     an.Assemble();
     std::cout << "Total time = " << time_ass.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    // int64_t nrow_null_pivot = 1488;
-    // TPZFMatrix<REAL> matSingular(nrow_null_pivot+1,nrow_null_pivot+1,0.);
-    // auto mat = an.MatrixSolver<STATE>().Matrix();
-    // mat->GetSub(0,0,nrow_null_pivot+1,nrow_null_pivot+1,matSingular);
-    // matSingular.Print("mat", std::cout, EMathematicaInput);
-    // matSingular.PutVal(nrow_null_pivot,nrow_null_pivot,1.);
-
-    // TPZFMatrix<REAL> rhsSingular(nrow_null_pivot+1,1,0.);
-    // rhsSingular.PutVal(nrow_null_pivot,0,1.);
-
-    // matSingular.SolveDirect(rhsSingular, ELDLt);
-
-    // TPZFMatrix<REAL> rigidbody(an.Rhs().Rows(),1,0.);
-    // rigidbody.PutSub(0,0,rhsSingular);
-
-    // an.LoadSolution(rigidbody);
-    // cmesh->TransferMultiphysicsSolution();
-
-    // PrintResults(an, cmesh, problem_data);
-    // {
-    //     std::ofstream out("cmesh_solve.txt");
-    //     cmesh->Print(out);
-    // }
-    // auto *pardiso = an.MatrixSolver<STATE>().GetPardisoControl();
-
-    // if (pardiso)
-    // {
-    //     pardiso->SetMessageLevel(1);
-    //     constexpr auto sys_type = SymProp::Sym;
-    //     constexpr auto prop = TPZPardisoSolver<STATE>::MProperty::EIndefinite;
-    //     pardiso->SetMatrixType(sys_type,prop);
-    //     TPZManVector<long long, 64> param = pardiso->GetParam();
-    //     param[3] = 0;
-    //     param[4] = 0;
-    //     param[9] = 8;
-    //     param[26] = 1;
-    //     param[59] = 0;
-    //     pardiso->SetParam(param);
-    // }
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;
     TPZSimpleTimer time_sol;
-    auto matK = an.MatrixSolver<STATE>().Matrix();
-    auto& rhs = an.Rhs();
-    // {
-    //     std::ofstream out("system.txt");
-    //     (*matK).Print("mat", out, EMathematicaInput); out << std::endl;
-    //     rhs.Print("rhs", out, EMathematicaInput); out << std::endl;
-    // }
-
     
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
-
-    auto res = rhs;
-    matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
-
-    // TPZFMatrix<REAL> sol(cmesh->NEquations(), 1, 0.);
-    
-    // sol(0,0) = 0.0691615;
-    // sol(1,0) = 0.083776;
-    // sol(2,0) = -0.083776;
-    // sol(3,0) = -0.0691615;
-    // sol(4,0) = 0.235665;
-    // sol(5,0) = 0.916103;
-    // sol(6,0) = 0.99848;
-    // sol(7,0) = 0.318042;
-    // sol(8,0) = -0.916103;
-    // sol(9,0) = -0.235665;
-    // sol(10,0) = -0.318042;
-    // sol(11,0) = -0.99848;
-    // sol(12,0) = -0.0132151;
-    // sol(13,0) = 0.00139937;
-    // sol(14,0) = -0.00139937;
-    // sol(15,0) = 0.0132151;
-    // sol(16,0) = -0.0240115;
-    // sol(17,0) = 0.0240115;
-    // sol(18,0) = 0.0093971;
-    // sol(19,0) = -0.0093971;
-    // sol(20,0) = -0.0214165;
-    // sol(21,0) = 0.0261044;
-    // sol(22,0) = -0.0109518;
-    // sol(23,0) = -0.0584726;
-    // sol(24,0) = -0.0235093;
-    // sol(25,0) = 0.0235093;
-    // sol(26,0) = 0.0381237;
-    // sol(27,0) = -0.0381237;
-    // sol(28,0) = 0.0214165;
-    // sol(29,0) = -0.0261044;
-    // sol(30,0) = 0.0109518;
-    // sol(31,0) = 0.0584726;
-    // sol(32,0) = 0.031875;
-    // sol(33,0) = -0.031875;
-    // sol(34,0) = -0.031875;
-    // sol(35,0) = 0.031875;
-    // sol(36,0) = -0.384538;
-    // sol(37,0) = -0.369923;
-    // sol(38,0) = 0.369923;
-    // sol(39,0) = 0.384538;
-    // sol(40,0) = -0.67994;
-    // sol(41,0) = -0.428423;
-    // sol(42,0) = 0.368375;
-    // sol(43,0) = 0.116858;
-    // sol(44,0) = 0.428423;
-    // sol(45,0) = 0.67994;
-    // sol(46,0) = -0.116858;
-    // sol(47,0) = -0.368375;
-    // sol(48,0) = 0.41226;
-    // sol(49,0) = 0.426874;
-    // sol(50,0) = -0.426874;
-    // sol(51,0) = -0.41226;
-    // sol(52,0) = -0.0854902;
-    // sol(53,0) = 0.0854902;
-    // sol(54,0) = 0.0854902;
-    // sol(55,0) = -0.0854902;
-    // sol(56,0) = -0.0950417;
-    // sol(57,0) = 0.181698;
-    // sol(58,0) = -1.25077e-24;
-    // sol(59,0) = 8.33333e-13;
-    // sol(60,0) = -0.0950417;
-    // sol(61,0) = -0.181698;
-    // sol(62,0) = -9.59816e-13;
-    // sol(63,0) = 0.14325;
-    // sol(64,0) = 9.26999e-13;
-    // sol(65,0) = 0.0468336;
-    // sol(66,0) = -0.246336;
-    // sol(67,0) = 0.246336;
-    // sol(68,0) = 0.246336;
-    // sol(69,0) = -0.246336;
-    // sol(70,0) = 2.30727e-12;
-    // sol(71,0) = 1.02005;
-    // sol(72,0) = -1.5936;
-    // sol(73,0) = 0.610619;
-    // sol(74,0) = -2.40667e-12;
-    // sol(75,0) = 2.16714;
-    // sol(76,0) = -1.5936;
-    // sol(77,0) = -0.610619;
-    // sol(78,0) = -0.146729;
-    // sol(79,0) = -2.21202e-12;
-    // sol(80,0) = 4.51924;
-    // sol(81,0) = 5.84306;
-    // sol(82,0) = -1.29021;
-    // sol(83,0) = -2.61403;
-    // sol(84,0) = 3.60872;
-    // sol(85,0) = 3.62334;
-    // sol(86,0) = -3.62334;
-    // sol(87,0) = -3.60872;
-    // sol(88,0) = -5.84306;
-    // sol(89,0) = -4.51924;
-    // sol(90,0) = 2.61403;
-    // sol(91,0) = 1.29021;
-    // sol(92,0) = -3.52455;
-    // sol(93,0) = -3.50994;
-    // sol(94,0) = 3.50994;
-    // sol(95,0) = 3.52455;
-    // sol(96,0) = 9.07253;
-    // sol(97,0) = -0.165726;
-    // sol(98,0) = -2.34739;
-    // sol(99,0) = 6.89086;
-    // sol(100,0) = 4.68994;
-    // sol(101,0) = -4.68994;
-    // sol(102,0) = -4.67532;
-    // sol(103,0) = 4.67532;
-    // sol(104,0) = -1.37225;
-    // sol(105,0) = 1.37225;
-    // sol(106,0) = 1.37225;
-    // sol(107,0) = -1.37225;
-    // sol(108,0) = -4.54831;
-    // sol(109,0) = 4.54831;
-    // sol(110,0) = 4.56293;
-    // sol(111,0) = -4.56293;
-    // sol(112,0) = -9.07253;
-    // sol(113,0) = 0.165726;
-    // sol(114,0) = 2.34739;
-    // sol(115,0) = -6.89086;
-    // sol(116,0) = -0.889718;
-    // sol(117,0) = 0.889718;
-    // sol(118,0) = 0.889718;
-    // sol(119,0) = -0.889718;
-    // sol(120,0) = -3.64483e-12;
-    // sol(121,0) = 31.778;
-    // sol(122,0) = -18.4765;
-    // sol(123,0) = 4.47091;
-    // sol(124,0) = -17.8905;
-    // sol(125,0) = -2.7714e-11;
-    // sol(126,0) = -18.4765;
-    // sol(127,0) = -4.47091;
-    // sol(128,0) = 3.27011e-12;
-    // sol(129,0) = 5.17499;
-    // sol(130,0) = -0.514412;
-    // sol(131,0) = 0.514412;
-    // sol(132,0) = 0.514412;
-    // sol(133,0) = -0.514412;
-    // sol(134,0) = -14.2666;
-    // sol(135,0) = -2.75523;
-    // sol(136,0) = -14.2666;
-    // sol(137,0) = 2.75523;
-    // sol(138,0) = 3.33804e-12;
-    // sol(139,0) = 7.9242;
-    // sol(140,0) = -3.57046e-12;
-    // sol(141,0) = 20.6089;
-    // sol(142,0) = -9.16535;
-    // sol(143,0) = -2.08351e-11;
-    // sol(144,0) = 0.164753;
-    // sol(145,0) = 1.46846;
-    // sol(146,0) = 3.09746e-12;
-    // sol(147,0) = -2.5504;
-    // sol(148,0) = -3.24934e-12;
-    // sol(149,0) = 2.22089;
-    // sol(150,0) = 0.164753;
-    // sol(151,0) = -1.46846;
-    // sol(152,0) = -1.1513;
-    // sol(153,0) = -7.23443e-12;
-    // sol(154,0) = -3.87156;
-    // sol(155,0) = -1.38728e-11;
-    
-    // REAL vecnorm = 0.;
-    // TPZFMatrix<STATE>& a = res;
-    // an.Solution() = sol;
-    // an.LoadSolution();
-    // cmesh->TransferMultiphysicsSolution();
 
     PrintResults(an, cmesh, problem_data);
     {
@@ -1343,14 +1128,6 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
         cmesh->Print(out);
     }
 
-    // for (int64_t i = 0; i < res.Rows(); i++)
-    //     vecnorm += a(i,0)*a(i,0);
-    // vecnorm = sqrt(vecnorm);
-    {
-        std::ofstream out("residual.txt");
-        res.Print("res", out, EMathematicaInput);
-        out << std::endl;
-    }
     return;
 }
 

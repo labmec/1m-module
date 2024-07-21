@@ -26,6 +26,7 @@ class ProblemData
         int type = 0; // bc type (explained below)
         TPZManVector<REAL,3>  value = {0., 0., 0.}; // bc value
         int matID = 0; // bc material ID
+        int domainID = 1; // domain material ID for which this BC is associated
     };
 
 private:
