@@ -1,0 +1,93 @@
+{	
+	"MeshName": "non-homogeneous-stretch3D-TH.msh",
+
+	"CreateMsh": false,
+
+	"HdivType": 0,
+
+	"DisppOrder": 2, // approximation order for displacement
+
+    "LambdapOrder": 1,
+
+	"Dim": 3,
+
+	"Resolution": 0,
+
+	"StaticCondensation": true,
+
+	"Domain": [ // domain data
+		{
+			"name": "Domain1",
+			"matID": 1,
+			"E": 1,
+			"nu": 0.5
+		},
+        {
+			"name": "Domain2",
+			"matID": 2,
+			"E": 2,
+			"nu": 0.5
+		}
+	],
+
+	"NormalBoundary":[
+        {
+            "name": "DispX1",
+            "matID": 3,
+            "type": 3,
+            "value": 0.5,
+            "domainID": 1
+        },
+        {
+            "name": "DispX2",
+            "matID": 4,
+            "type": 3,
+            "value": 0.5,
+            "domainID": 2
+        },
+        {
+            "name": "FixedX1",
+            "matID": 5,
+            "type": 3,
+            "value": 0.0,
+            "domainID": 1
+        },
+        {
+            "name": "FixedX2",
+            "matID": 6,
+            "type": 3,
+            "value": 0.0,
+            "domainID": 2
+        },
+        {
+            "name": "FixedY1",
+            "matID": 7,
+            "type": 4,
+            "value": 0.0,
+            "domainID": 1
+        },
+        {
+            "name": "FixedZ1",
+            "matID": 8,
+            "type": 5,
+            "value": 0.0,
+            "domainID": 1
+        },
+        {
+            "name": "FixedZ2",
+            "matID": 9,
+            "type": 5,
+            "value": 0.0,
+            "domainID": 2
+        }
+	],
+
+	"TangentialBoundary": [
+	]
+}
+
+
+
+
+
+

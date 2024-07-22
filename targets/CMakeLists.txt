@@ -46,3 +46,6 @@ target_link_libraries(non-homogeneous-stretch2D PRIVATE libproject)
 
 add_executable(non-homogeneous-stretch3D non-homogeneous-stretch3D.cpp)
 target_link_libraries(non-homogeneous-stretch3D PRIVATE libproject)
+
+add_executable(non-homogeneous-stretch3D-TH non-homogeneous-stretch3D-TH.cpp)
+target_link_libraries(non-homogeneous-stretch3D-TH PRIVATE libproject)

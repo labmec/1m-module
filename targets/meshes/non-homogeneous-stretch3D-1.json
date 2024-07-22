@@ -49,14 +49,14 @@
             "name": "UnitNormalDisp1",
             "matID": 5,
             "type": 0,
-            "value": 1.0,
+            "value": 0.5,
             "domainID": 1
         },
         {
             "name": "UnitNormalDisp2",
             "matID": 6,
             "type": 0,
-            "value": 1.0,
+            "value": 0.5,
             "domainID": 2
         },
         {
