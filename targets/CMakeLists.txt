@@ -41,5 +41,8 @@ target_link_libraries(taylor-hood-test PRIVATE libproject)
 add_executable(taylor-hood-module taylor-hood-module.cpp)
 target_link_libraries(taylor-hood-module PRIVATE libproject)
 
-add_executable(non-homogeneous-stretch non-homogeneous-stretch.cpp)
-target_link_libraries(non-homogeneous-stretch PRIVATE libproject)
+add_executable(non-homogeneous-stretch2D non-homogeneous-stretch2D.cpp)
+target_link_libraries(non-homogeneous-stretch2D PRIVATE libproject)
+
+add_executable(non-homogeneous-stretch3D non-homogeneous-stretch3D.cpp)
+target_link_libraries(non-homogeneous-stretch3D PRIVATE libproject)

@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "non-homogeneous-stretch-";
+    std::string jsonfilename = "non-homogeneous-stretch3D-";
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";

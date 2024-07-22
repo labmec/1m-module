@@ -1,5 +1,5 @@
 {	
-	"MeshName": "non-homogeneous-stretch-1.msh",
+	"MeshName": "non-homogeneous-stretch3D-1.msh",
 
 	"CreateMsh": false,
 
@@ -9,7 +9,7 @@
 
     "LambdapOrder": 0,
 
-	"Dim": 2,
+	"Dim": 3,
 
 	"Resolution": 0,
 
@@ -20,13 +20,13 @@
 			"name": "Domain1",
 			"matID": 1,
 			"E": 1,
-			"nu": 0
+			"nu": 0.5
 		},
         {
 			"name": "Domain2",
 			"matID": 2,
 			"E": 2,
-			"nu": 0
+			"nu": 0.5
 		}
 	],
 
