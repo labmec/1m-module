@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "1m-module-hdiv.json";
+    std::string jsonfilename = "1m-module-hdiv-coarse.json";
     
     ProblemData problemdata;
     std::cout << "json input filename: " << jsonfilename << std::endl;
@@ -107,11 +107,12 @@ int main(int argc, char *argv[])
     gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename, &problemdata);
     
     InsertLagrangeMultipliers(&problemdata, gmesh);
+    if(0)
     {
         std::ofstream out("gmesh.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
-        std::ofstream out2("gmesh.txt");
-        gmesh->Print(out2);
+        // std::ofstream out2("gmesh.txt");
+        // gmesh->Print(out2);
     }
 
     const REAL young = problemdata.DomainVec()[0].E;
@@ -133,18 +134,20 @@ int main(int argc, char *argv[])
         DebugStop(); // Please implement the next lines correctly if many domains
 
     TPZCompMesh *cmesh_u = CreateCMeshU(&problemdata, gmesh);
+    if (0)
     {
         std::ofstream out("cmesh_u.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_u, out);
-        std::ofstream out2("cmesh_u.txt");
-        cmesh_u->Print(out2);
+        // std::ofstream out2("cmesh_u.txt");
+        // cmesh_u->Print(out2);
     }
     TPZCompMesh *cmesh_p = CreateCMeshP(&problemdata, gmesh);
+    if (0)
     {
         std::ofstream out("cmesh_p.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_p, out);
-        std::ofstream out2("cmesh_p.txt");
-        cmesh_p->Print(out2);
+        // std::ofstream out2("cmesh_p.txt");
+        // cmesh_p->Print(out2);
     }
     TPZCompMesh *cmesh_pm = nullptr;
     TPZCompMesh *cmesh_g = nullptr;
@@ -157,12 +160,14 @@ int main(int argc, char *argv[])
     }
     
     TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh, elas);
+    if (0)
     {
         std::ofstream out("gmesh.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
         std::ofstream out2("gmesh.txt");
         gmesh->Print(out2);
     }
+    if (0)
     {
         std::ofstream out("cmesh.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_m, out);
@@ -174,6 +179,7 @@ int main(int argc, char *argv[])
     {
         CondenseElements(&problemdata, cmesh_m, gmesh);
     }
+    if (0)
     {
         std::ofstream out("cmesh_condensed.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_m, out);
