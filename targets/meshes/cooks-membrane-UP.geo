@@ -54,3 +54,5 @@ Transfinite Curve {4} = 33 Using Progression 1;
 Transfinite Surface {1};
 //+
 //Recombine Surface {1};
+//+
+Physical Point("Sensor", 6) = {3};

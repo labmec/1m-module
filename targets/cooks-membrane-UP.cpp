@@ -43,8 +43,8 @@
 #include "TPZSYSMPPardiso.h"
 #include "TPZSparseMatRed.h"
 
-const int global_nthread = 64;
-const int global_pord_bc = 10;
+const int global_nthread = 0;
+const int global_pord_bc = 3;
 
 using namespace std;
 
