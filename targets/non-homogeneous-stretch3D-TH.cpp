@@ -734,7 +734,8 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *proble
         "Pressure",
         "Stress",
         "Strain",
-        "VonMises"};
+        "VonMises",
+        "DeviatoricStress"};
     auto vtk = TPZVTKGenerator(cmesh, fields, plotfile, problem_data->Resolution());
     vtk.SetNThreads(global_nthread);
     vtk.Do();

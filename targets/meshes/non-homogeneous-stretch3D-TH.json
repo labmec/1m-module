@@ -1,5 +1,5 @@
 {	
-	"MeshName": "non-homogeneous-stretch3D-TH.msh",
+	"MeshName": "non-homogeneous-stretch3D-TH1.msh",
 
 	"CreateMsh": false,
 
@@ -11,7 +11,7 @@
 
 	"Dim": 3,
 
-	"Resolution": 0,
+	"Resolution": 3,
 
 	"StaticCondensation": true,
 

@@ -1,9 +1,9 @@
 // Gmsh project created on Fri Aug 25 11:33:46 2023
 SetFactory("OpenCASCADE");
 
-elx = 1;
-ely = 1;
-elz = 1;
+elx = 4;
+ely = 4;
+elz = 4;
 ndivx = elx + 1;
 ndivy = ely + 1;
 ndivz = elz + 1;
@@ -70,11 +70,11 @@ Physical Surface("FixedZ1", 8) = {1,7};
 //+
 Physical Surface("FixedZ2", 9) = {2,11};
 //+
-Transfinite Curve {1, 12, 3, 15, 6, 19} = elx Using Progression 1;
+Transfinite Curve {1, 12, 3, 15, 6, 19} = ndivx Using Progression 1;
 //+
-Transfinite Curve {7, 4, 10, 17, 5, 20, 14, 2} = ely Using Progression 1;
+Transfinite Curve {7, 4, 10, 17, 5, 20, 14, 2} = ndivy Using Progression 1;
 //+
-Transfinite Curve {16, 18, 13, 8, 9, 11} = elz Using Progression 1;
+Transfinite Curve {16, 18, 13, 8, 9, 11} = ndivz Using Progression 1;
 //+
 Transfinite Surface {3} = {6, 7, 8, 1};
 //+

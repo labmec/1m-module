@@ -1218,6 +1218,7 @@ void PrintResults(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *proble
         // "ExactStress",
         "Displacement",
         "Stress",
+        "DeviatoricStress",
         "Strain",
         "VonMises",
         "Pressure"
