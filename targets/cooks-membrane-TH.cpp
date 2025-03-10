@@ -54,13 +54,13 @@ static TPZLogger logger("pz.1mmodule");
 int main(int argc, char *argv[])
 {
 #ifdef PZ_LOG
-    TPZLogger::InitializePZLOG(std::string(INPUTDIR) + "/log4cxx.cfg");
+    TPZLogger::InitializePZLOG(std::string(MESHES_DIR) + "/log4cxx.cfg");
 #endif
 
     std::cout << "--------- Starting simulation ---------" << std::endl;
 
     // Reading problem data from json
-    std::string jsonfilename = "cooks-membrane-TH-quad-";
+    std::string jsonfilename = "cooks-membrane-TH-tri-";
     int meshref = 32;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += std::to_string(meshref) + ".json";
