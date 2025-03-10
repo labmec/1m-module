@@ -43,7 +43,7 @@
 #include "TPZSYSMPPardiso.h"
 #include "TPZSparseMatRed.h"
 
-const int global_nthread = 0;
+const int global_nthread = 64;
 const int global_pord_bc = 10;
 
 using namespace std;
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     std::string jsonfilename = "conv-bishop-";
     int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
-    jsonfilename += to_string(meshref) + "-hex.json";
+    jsonfilename += to_string(meshref) + "-tet.json";
     // jsonfilename = "bishop-beam-UP.json";
     
     ProblemData problemdata;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     gmesh = ReadMeshFromGmsh(std::string(MESHES_DIR) + "/" + filename, &problemdata);
     
     InsertLagrangeMultipliers(&problemdata, gmesh);
-    {
+    if (0){
         std::ofstream out("gmesh.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
         std::ofstream out2("gmesh.txt");
@@ -137,14 +137,14 @@ int main(int argc, char *argv[])
         DebugStop(); // Please implement the next lines correctly if many domains
 
     TPZCompMesh *cmesh_u = CreateCMeshU(&problemdata, gmesh);
-    {
+    if (0){
         std::ofstream out("cmesh_u.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_u, out);
         std::ofstream out2("cmesh_u.txt");
         cmesh_u->Print(out2);
     }
     TPZCompMesh *cmesh_p = CreateCMeshP(&problemdata, gmesh);
-    {
+    if (0){
         std::ofstream out("cmesh_p.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_p, out);
         std::ofstream out2("cmesh_p.txt");
@@ -161,29 +161,32 @@ int main(int argc, char *argv[])
     }
     
     TPZMultiphysicsCompMesh *cmesh_m = CreateMultiphysicsMesh(&problemdata, gmesh, elas);
-    {
+    if (0){
         std::ofstream out("gmesh.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
         std::ofstream out2("gmesh.txt");
         gmesh->Print(out2);
     }
-    {
+    if (0){
         std::ofstream out("cmesh.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_m, out);
         std::ofstream out2("cmesh.txt");
         cmesh_m->Print(out2);
     }
-
+    int64_t ndofs_total = cmesh_m->NEquations();
+    std::cout << "ndofs_total = " << ndofs_total << std::endl;
     if (problemdata.CondensedElements())
     {
         CondenseElements(&problemdata, cmesh_m, gmesh);
     }
-    {
+    if (0){
         std::ofstream out("cmesh_condensed.vtk");
         TPZVTKGeoMesh::PrintCMeshVTK(cmesh_m, out);
         std::ofstream out2("cmesh_condensed.txt");
         cmesh_m->Print(out2);
     }
+    int64_t ndofs_condensed = cmesh_m->NEquations();
+    std::cout << "ndofs_condensed = " << ndofs_condensed << std::endl;
     // Analysis
     // Solve Multiphysics
     TPZLinearAnalysis an(cmesh_m, RenumType::EMetis);
@@ -192,7 +195,7 @@ int main(int argc, char *argv[])
 
     // Post Process
     std::cout << "--------- PostProcess ---------" << std::endl;
-    PrintResults(an, cmesh_m, &problemdata);
+    // PrintResults(an, cmesh_m, &problemdata);
     
     // Calculating error
     if (elas->fProblemType != 0)
@@ -203,7 +206,8 @@ int main(int argc, char *argv[])
         out << "\n----------------- Starting new simulation -----------------" << std::endl;
         std::cout << "\n----------------- Starting error computation -----------------" << std::endl;
         out << "meshref: " << meshref << ", poisson: " << poisson << std::endl;
-        
+        out << "ndofs: " << ndofs_total << ", after condensation: " << ndofs_condensed << std::endl;
+
         TPZMaterial *mat = cmesh_m->FindMaterial(problemdata.DomainVec()[0].matID);
         TPZMatErrorCombinedSpaces<STATE> *materr = dynamic_cast<TPZMatErrorCombinedSpaces<STATE>*>(mat);
         TPZManVector<REAL, 10> Errors(materr->NEvalErrors());
@@ -1157,8 +1161,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     /// solves the system
     std::cout << "--------- Solve ---------" << std::endl;
     TPZSimpleTimer time_sol;
-    auto matK = an.MatrixSolver<STATE>().Matrix();
-    auto& rhs = an.Rhs();
+    // auto matK = an.MatrixSolver<STATE>().Matrix();
+    // auto& rhs = an.Rhs();
     // {
     //     std::ofstream out("system.txt");
     //     (*matK).Print("mat", out, EMathematicaInput); out << std::endl;
@@ -1169,8 +1173,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    auto res = rhs;
-    matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
+    // auto res = rhs;
+    // matK->MultAdd(an.Solution(), rhs, res, 1.0, -1.0);
 
     // TPZFMatrix<REAL> sol(cmesh->NEquations(), 1, 0.);
     
@@ -1337,8 +1341,8 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     // an.LoadSolution();
     // cmesh->TransferMultiphysicsSolution();
 
-    PrintResults(an, cmesh, problem_data);
-    {
+    // PrintResults(an, cmesh, problem_data);
+    if (0){
         std::ofstream out("cmesh_solve.txt");
         cmesh->Print(out);
     }
@@ -1346,11 +1350,11 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     // for (int64_t i = 0; i < res.Rows(); i++)
     //     vecnorm += a(i,0)*a(i,0);
     // vecnorm = sqrt(vecnorm);
-    {
-        std::ofstream out("residual.txt");
-        res.Print("res", out, EMathematicaInput);
-        out << std::endl;
-    }
+    // if (0){
+    //     std::ofstream out("residual.txt");
+    //     res.Print("res", out, EMathematicaInput);
+    //     out << std::endl;
+    // }
     return;
 }
 

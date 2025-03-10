@@ -49,3 +49,9 @@ target_link_libraries(non-homogeneous-stretch3D PRIVATE libproject)
 
 add_executable(non-homogeneous-stretch3D-TH non-homogeneous-stretch3D-TH.cpp)
 target_link_libraries(non-homogeneous-stretch3D-TH PRIVATE libproject)
+
+add_executable(bishop-TH bishop-TH.cpp)
+target_link_libraries(bishop-TH PRIVATE libproject)
+
+add_executable(cooks-membrane-TH cooks-membrane-TH.cpp)
+target_link_libraries(cooks-membrane-TH PRIVATE libproject)

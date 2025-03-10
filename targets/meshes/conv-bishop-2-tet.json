@@ -3,9 +3,9 @@
 
     "HdivType": 0,
 
-	"DisppOrder": 3, // approximation order for displacement
+	"DisppOrder": 4, // approximation order for displacement
 
-    "LambdapOrder": 2,
+    "LambdapOrder": 3,
 
 	"Dim": 3,
 
