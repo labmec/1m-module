@@ -3,7 +3,7 @@ a = 44;
 b = 48;
 c = 16;
 
-nx = 1;
+nx = 32;
 
 Point(1) = {0.0, 0.0, 0.0, 1.0};
 //+
@@ -25,8 +25,8 @@ Curve Loop(1) = {1, 2, 3, 4};
 //+
 Plane Surface(1) = {1};
 //+
-Extrude {0, 0, -1} {
-  Surface{1}; Layers{1}; //Recombine;
+Extrude {0, 0, -10} {
+  Surface{1}; Layers{1}; Recombine;
 }
 //+
 
@@ -39,6 +39,8 @@ Physical Surface("ZeroNormalDisp", 3) = {1,5,6};
 Physical Surface("ZeroTangentialDisp", 4) = {5};
 //+
 Physical Surface("ShearStress", 5) = {3};
+//+
+//Physical Surface("ZeroShearStress", 6) = {1,2,4,6};
 //+
 
 Transfinite Curve {1} = nx+1 Using Progression 1;
@@ -62,9 +64,9 @@ Transfinite Surface {3} = {2, 6, 7, 3};
 //+
 Transfinite Surface {5} = {4, 8, 5, 1};
 //+
-//Recombine Surface {2, 3, 6, 5, 1, 4};
+Recombine Surface {2, 3, 6, 5, 1, 4};
 //+
 Transfinite Volume{1} = {2, 3, 4, 1, 5, 8, 7, 6};
 //+
-Physical Point("Sensor", 6) = {3};
+Physical Point("Sensor", 7) = {3};
 //+

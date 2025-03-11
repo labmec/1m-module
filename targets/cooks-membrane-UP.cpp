@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
     // Reading problem data from json
     std::string jsonfilename = "cooks-membrane-3d-hex-";
-    int meshref = 32;
+    int meshref = 1;
     if(argc > 1) meshref = atoi(argv[1]);
     jsonfilename += to_string(meshref) + ".json";
     ProblemData problemdata;
@@ -1101,8 +1101,7 @@ void SolveProblemDirect(TPZLinearAnalysis &an, TPZCompMesh *cmesh, ProblemData *
     an.Solve();
     std::cout << "Total time = " << time_sol.ReturnTimeDouble() / 1000. << " s" << std::endl;
 
-    PrintResults(an, cmesh, problem_data);
-    {
+    if (0){
         std::ofstream out("cmesh_solve.txt");
         cmesh->Print(out);
     }

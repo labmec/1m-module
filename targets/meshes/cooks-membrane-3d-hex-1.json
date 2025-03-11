@@ -1,13 +1,13 @@
 {	
-	"MeshName": "cooks-membrane-3d-tet-1.msh",
+	"MeshName": "cooks-membrane-3d-hex-16.msh",
 
 	"CreateMsh": false,
 
 	"HdivType": 0,
 
-	"DisppOrder": 1, // approximation order for displacement
+	"DisppOrder": 3, // approximation order for displacement
 
-    "LambdapOrder": 0,
+    "LambdapOrder": 2,
 
 	"Dim": 3,
 
@@ -51,6 +51,12 @@
             "matID": 5,
             "type": 3,
             "value": [0.0,6.25,0.0]
+        },
+        {
+            "name": "ZeroShearStress",
+            "matID": 6,
+            "type": 3,
+            "value": [0.0,0.0,0.0]
         }
 	]
 }
